@@ -66,7 +66,7 @@ export default async function JobsPage({
               {job.title}
             </a>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {job.companies?.name ?? "Entreprise inconnue"}
+              {job.companies?.[0]?.name ?? "Entreprise inconnue"}
               {" · "}
               {job.is_remote ? "Remote" : job.location}
               {" · "}
