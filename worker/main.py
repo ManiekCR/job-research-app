@@ -13,7 +13,9 @@ from dataclasses import dataclass
 import requests
 from dotenv import load_dotenv
 
+import crypto_utils
 import db
+import scoring
 
 ARBEITNOW_URL = "https://www.arbeitnow.com/api/job-board-api"
 MAX_PAGES = 5  # l'API trie par date décroissante ; 5 pages suffisent largement pour 24h
@@ -121,11 +123,18 @@ def is_relevant(job: RawJob) -> bool:
 def main() -> None:
     load_dotenv()
     user_id = os.environ["APP_USER_ID"]
+    master_key = os.environ["ENCRYPTION_MASTER_KEY"]
 
     scrape_run_id = db.create_scrape_run(user_id)
     print(f"Run démarré : {scrape_run_id}")
 
     try:
+        # Chargés une seule fois pour tout le run — inutile de les redemander
+        # à chaque offre.
+        profile = db.get_profile(user_id)
+        creds = db.get_llm_credentials(user_id)
+        api_key = crypto_utils.decrypt(creds["encrypted_key"], master_key) if creds else None
+
         all_jobs = fetch_recent_jobs()
         relevant = [job for job in all_jobs if is_relevant(job)]
         print(f"{len(all_jobs)} offres récupérées, {len(relevant)} retenues après filtrage.")
@@ -133,12 +142,35 @@ def main() -> None:
         new_count = 0
         for job in relevant:
             company_id = db.upsert_company(user_id, job.company_name)
-            is_new = db.insert_job(user_id, company_id, scrape_run_id, job)
-            if is_new:
-                new_count += 1
-                print(f"  + nouvelle : {job.title} — {job.company_name}")
-            else:
+            new_job_id = db.insert_job(user_id, company_id, scrape_run_id, job)
+
+            if new_job_id is None:
                 print(f"  = déjà connue : {job.title} — {job.company_name}")
+                continue
+
+            new_count += 1
+            print(f"  + nouvelle : {job.title} — {job.company_name}")
+
+            if not creds:
+                print("    (pas de config LLM — offre non notée)")
+                continue
+
+            try:
+                result = scoring.score_job(
+                    provider=creds["provider"],
+                    model=creds["fast_model"],
+                    api_key=api_key,
+                    cv_json=profile["cv_json"],
+                    weights=profile["score_weights"],
+                    job_title=job.title,
+                    job_description=job.description,
+                )
+                db.insert_job_score(user_id, new_job_id, result)
+                print(f"    score : {result.final_score}/100")
+            except Exception as scoring_error:
+                # Une offre mal notée ne doit pas faire planter tout le run —
+                # elle restera juste sans score (visible côté web comme "non notée").
+                print(f"    échec du scoring : {scoring_error}")
 
         db.finish_scrape_run(
             scrape_run_id,
