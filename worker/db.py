@@ -41,11 +41,11 @@ def upsert_company(user_id: str, name: str) -> str:
     return result.data[0]["id"]
 
 
-def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> bool:
+def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> str | None:
     """Insère une offre si elle n'existe pas déjà (même empreinte).
-    Renvoie True si une nouvelle ligne a été créée, False si elle existait déjà
-    (auquel cas rien n'est modifié — on ne veut pas écraser un `is_hidden` que
-    tu aurais mis à la main plus tard)."""
+    Renvoie l'id de la nouvelle ligne si elle a été créée, None si elle existait
+    déjà (auquel cas rien n'est modifié — on ne veut pas écraser un `is_hidden`
+    que tu aurais mis à la main plus tard, et on ne la re-note pas non plus)."""
     fingerprint = f"arbeitnow:{job.slug}"
 
     result = (
@@ -71,7 +71,7 @@ def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> bool:
         )
         .execute()
     )
-    return len(result.data) > 0
+    return result.data[0]["id"] if result.data else None
 
 def create_scrape_run(user_id: str) -> str:
     """Crée une ligne 'run en cours', renvoie son id."""
@@ -101,3 +101,52 @@ def finish_scrape_run(
             "finished_at": datetime.now(timezone.utc).isoformat(),
         }
     ).eq("id", scrape_run_id).execute()
+
+
+def get_profile(user_id: str) -> dict:
+    """Renvoie le CV maître + les poids de score. Valeurs vides si rien n'est configuré."""
+    result = (
+        get_client()
+        .table("profile")
+        .select("cv_json, score_weights")
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    # maybe_single() renvoie carrément None (pas un objet avec .data vide)
+    # quand 0 ligne correspond — piège classique de cette librairie.
+    if result is None:
+        return {"cv_json": {}, "score_weights": {}}
+    return result.data
+
+
+def get_llm_credentials(user_id: str) -> dict | None:
+    """Renvoie la config LLM (clé encore chiffrée à ce stade)."""
+    result = (
+        get_client()
+        .table("llm_credentials")
+        .select("provider, fast_model, encrypted_key")
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    return result.data if result else None
+
+
+def insert_job_score(user_id: str, job_id: str, score) -> None:
+    """Enregistre (ou remplace, si déjà noté) le score d'une offre."""
+    get_client().table("job_scores").upsert(
+        {
+            "user_id": user_id,
+            "job_id": job_id,
+            "hard_skills_score": score.hard_skills_score,
+            "soft_skills_score": score.soft_skills_score,
+            "experience_score": score.experience_score,
+            "languages_score": score.languages_score,
+            "final_score": score.final_score,
+            "missing_skills": score.missing_skills,
+            "reasoning": score.reasoning,
+            "model_used": score.model_used,
+        },
+        on_conflict="job_id",
+    ).execute()
