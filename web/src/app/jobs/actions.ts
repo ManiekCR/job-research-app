@@ -1,16 +1,17 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function triggerScrape() {
+type TriggerResult = { ok: true } | { ok: false; error: string };
+
+export async function triggerScrape(): Promise<TriggerResult> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    return { ok: false, error: "Non connecté." };
   }
 
   const owner = process.env.GITHUB_REPO_OWNER!;
@@ -32,10 +33,8 @@ export async function triggerScrape() {
 
   if (!response.ok) {
     const text = await response.text();
-    redirect(
-      "/jobs?error=" + encodeURIComponent(`Échec du déclenchement (${response.status}): ${text}`)
-    );
+    return { ok: false, error: `Échec du déclenchement (${response.status}): ${text}` };
   }
 
-  redirect("/jobs?triggered=1");
+  return { ok: true };
 }
