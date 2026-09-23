@@ -1,19 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { triggerScrape } from "./actions";
+import { ScrapeButton } from "./scrape-button";
 
-export default async function JobsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; triggered?: string }>;
-}) {
-  const { error, triggered } = await searchParams;
-
+export default async function JobsPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: jobs, error: queryError } = await supabase
+  const { data: jobs, error } = await supabase
     .from("jobs")
     .select("id, title, location, is_remote, url, posted_at, source, companies(name)")
     .eq("user_id", user!.id)
@@ -21,33 +15,16 @@ export default async function JobsPage({
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
           Offres ({jobs?.length ?? 0})
         </h1>
-        <form action={triggerScrape}>
-          <button
-            type="submit"
-            className="rounded bg-foreground px-3 py-2 text-sm text-background"
-          >
-            Scraper
-          </button>
-        </form>
+        <ScrapeButton />
       </div>
 
-      {triggered && (
-        <p className="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Scraping lancé. Ça prend ~1-2 min — recharge la page pour voir les nouvelles offres.
-        </p>
-      )}
       {error && (
-        <p className="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
-      {queryError && (
         <p className="mt-4 text-sm text-red-700 dark:text-red-300">
-          Erreur : {queryError.message}
+          Erreur : {error.message}
         </p>
       )}
 
