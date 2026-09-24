@@ -46,7 +46,7 @@ def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> str | 
     Renvoie l'id de la nouvelle ligne si elle a été créée, None si elle existait
     déjà (auquel cas rien n'est modifié — on ne veut pas écraser un `is_hidden`
     que tu aurais mis à la main plus tard, et on ne la re-note pas non plus)."""
-    fingerprint = f"arbeitnow:{job.slug}"
+    fingerprint = f"{job.source}:{job.external_id}"
 
     result = (
         get_client()
@@ -56,8 +56,8 @@ def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> str | 
                 "user_id": user_id,
                 "company_id": company_id,
                 "scrape_run_id": scrape_run_id,
-                "source": "arbeitnow",
-                "sources_seen": ["arbeitnow"],
+                "source": job.source,
+                "sources_seen": [job.source],
                 "url": job.url,
                 "title": job.title,
                 "location": job.location,
