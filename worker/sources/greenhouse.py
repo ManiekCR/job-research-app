@@ -3,25 +3,16 @@ https://developers.greenhouse.io/job-board.html"""
 
 from __future__ import annotations
 
-import html
-import re
 import time
 from datetime import datetime
 
 import requests
 
 from .ats_companies import GREENHOUSE_COMPANIES
-from .base import RawJob
+from .base import RawJob, strip_html
 
 SOURCE_NAME = "greenhouse"
 API_URL = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true"
-
-
-def _strip_html(raw: str) -> str:
-    # `content` renvoie du HTML dont les balises sont elles-mêmes échappées
-    # (ex: "&lt;h1&gt;") : il faut d'abord déséchapper, puis retirer les balises.
-    unescaped = html.unescape(raw or "")
-    return re.sub(r"<[^>]+>", " ", unescaped).strip()
 
 
 def fetch(lookback_hours: int) -> list[RawJob]:
@@ -55,7 +46,7 @@ def fetch(lookback_hours: int) -> list[RawJob]:
                     remote="remote" in location_name.lower() or "remote" in item["title"].lower(),
                     url=item["absolute_url"],
                     created_at=int(posted_dt.timestamp()),
-                    description=_strip_html(item.get("content", "")),
+                    description=strip_html(item.get("content", "")),
                 )
             )
 

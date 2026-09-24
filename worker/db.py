@@ -48,7 +48,7 @@ def find_duplicate_job(user_id: str, company_id: str, title: str) -> dict | None
     result = (
         get_client()
         .table("jobs")
-        .select("id, sources_seen")
+        .select("id, sources_seen, description")
         .eq("user_id", user_id)
         .eq("company_id", company_id)
         .ilike("title", title.strip())
@@ -61,16 +61,20 @@ def find_duplicate_job(user_id: str, company_id: str, title: str) -> dict | None
 def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> str | None:
     """Insère une offre si elle n'existe pas déjà (même entreprise + même titre,
     tous sites confondus). Si elle existe déjà, ajoute juste la nouvelle source
-    à `sources_seen` — on ne la duplique pas et on ne la re-note pas."""
+    à `sources_seen` (et rafraîchit la description si celle-ci a changé — utile
+    si elle était vide ou mal nettoyée lors du premier passage) — on ne la
+    duplique pas et on ne la re-note pas."""
     fingerprint = f"{job.source}:{job.external_id}"
 
     duplicate = find_duplicate_job(user_id, company_id, job.title)
     if duplicate is not None:
+        updates: dict = {}
         if job.source not in duplicate["sources_seen"]:
-            updated_sources = duplicate["sources_seen"] + [job.source]
-            get_client().table("jobs").update(
-                {"sources_seen": updated_sources}
-            ).eq("id", duplicate["id"]).execute()
+            updates["sources_seen"] = duplicate["sources_seen"] + [job.source]
+        if job.description and job.description != duplicate.get("description"):
+            updates["description"] = job.description
+        if updates:
+            get_client().table("jobs").update(updates).eq("id", duplicate["id"]).execute()
         return None
 
     result = (

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ScrapeButton } from "./scrape-button";
 import { ImportUrlForm } from "./import-url-form";
+import Link from "next/link";
 
 // Le client Supabase (sans génération de types) type TOUJOURS un embed comme
 // un tableau. En réalité, PostgREST renvoie un objet UNIQUE (pas un tableau)
@@ -104,6 +105,13 @@ export default async function JobsPage() {
                 {" · "}
                 source : {job.source}
               </p>
+              
+              <Link
+                href={`/jobs/${job.id}`}
+                className="mt-2 inline-block text-sm text-blue-700 hover:underline dark:text-blue-400"
+              >
+                Voir les détails →
+              </Link>
 
               {job.is_hidden && (
                 <span className="mt-2 inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-950 dark:text-purple-300">
