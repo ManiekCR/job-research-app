@@ -3,3 +3,4 @@ supabase>=2.31
 python-dotenv>=1.0
 cryptography>=42
 litellm>=1.100
+python-jobspy>=1.1
