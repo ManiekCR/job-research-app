@@ -89,6 +89,24 @@ def main() -> None:
                 # Une offre mal notée ne doit pas faire planter tout le run.
                 print(f"    échec du scoring : {scoring_error}")
 
+        if creds:
+            unscored = db.get_unscored_jobs(user_id)
+            for job in unscored:
+                try:
+                    result = scoring.score_job(
+                        provider=creds["provider"],
+                        model=creds["fast_model"],
+                        api_key=api_key,
+                        cv_json=profile["cv_json"],
+                        weights=profile["score_weights"],
+                        job_title=job["title"],
+                        job_description=job["description"],
+                    )
+                    db.insert_job_score(user_id, job["id"], result)
+                    print(f"  (rattrapage) {job['title']} -> {result.final_score}/100")
+                except Exception as scoring_error:
+                    print(f"    échec du scoring (rattrapage) sur '{job['title']}' : {scoring_error}")
+                    
         db.finish_scrape_run(
             scrape_run_id,
             status="done",
