@@ -107,7 +107,9 @@ def main() -> None:
                     print(f"  (rattrapage) {job['title']} -> {result.final_score}/100")
                 except Exception as scoring_error:
                     print(f"    échec du scoring (rattrapage) sur '{job['title']}' : {scoring_error}")
-                    
+        
+        db.update_hidden_badges(user_id)
+                            
         db.finish_scrape_run(
             scrape_run_id,
             status="done",

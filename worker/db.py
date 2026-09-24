@@ -182,6 +182,51 @@ def get_unscored_jobs(user_id: str) -> list[dict]:
     return [job for job in all_jobs if job["id"] not in scored_job_ids]
 
 
+def update_hidden_badges(user_id: str) -> None:
+    """Marque comme 'probablement cachée' toute offre qui ne vient d'aucune
+    grande plateforme (LinkedIn/Indeed) et dont aucun équivalent (même
+    entreprise + titre similaire) n'existe sur ces plateformes dans les 30
+    derniers jours. Recalculé entièrement à chaque run : une offre peut
+    redevenir visible si une offre similaire est découverte plus tard."""
+    jobs = (
+        get_client()
+        .table("jobs")
+        .select("id, company_id, title, source, sources_seen, is_hidden")
+        .eq("user_id", user_id)
+        .execute()
+        .data
+    )
+
+    for job in jobs:
+        # Pas seulement `source` (l'origine du tout premier scraping) : une
+        # offre trouvée d'abord ailleurs puis fusionnée avec une copie
+        # LinkedIn/Indeed (dédoublonnage 7.4) a `sources_seen` mis à jour
+        # mais garde son `source` d'origine.
+        seen_big_platform = job["source"] in ("linkedin", "indeed") or any(
+            s in ("linkedin", "indeed") for s in job["sources_seen"]
+        )
+        if seen_big_platform:
+            is_hidden = False
+        else:
+            result = (
+                get_client()
+                .rpc(
+                    "job_has_similar_big_platform_listing",
+                    {
+                        "p_user_id": user_id,
+                        "p_company_id": job["company_id"],
+                        "p_title": job["title"],
+                        "p_exclude_job_id": job["id"],
+                    },
+                )
+                .execute()
+            )
+            is_hidden = not result.data
+
+        if is_hidden != job["is_hidden"]:
+            get_client().table("jobs").update({"is_hidden": is_hidden}).eq("id", job["id"]).execute()
+
+            
 def insert_job_score(user_id: str, job_id: str, score) -> None:
     """Enregistre (ou remplace, si déjà noté) le score d'une offre."""
     get_client().table("job_scores").upsert(
