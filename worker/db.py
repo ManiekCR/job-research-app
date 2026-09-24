@@ -158,6 +158,29 @@ def get_llm_credentials(user_id: str) -> dict | None:
     return result.data if result else None
 
 
+def get_unscored_jobs(user_id: str) -> list[dict]:
+    """Renvoie les offres qui n'ont pas encore de score — typiquement des offres
+    importées manuellement (qui ne passent pas par insert_job pendant un run),
+    ou dont le scoring avait échoué lors d'un run précédent."""
+    scored_job_ids = {
+        row["job_id"]
+        for row in get_client()
+        .table("job_scores")
+        .select("job_id")
+        .eq("user_id", user_id)
+        .execute()
+        .data
+    }
+    all_jobs = (
+        get_client()
+        .table("jobs")
+        .select("id, title, description")
+        .eq("user_id", user_id)
+        .execute()
+        .data
+    )
+    return [job for job in all_jobs if job["id"] not in scored_job_ids]
+
 
 def insert_job_score(user_id: str, job_id: str, score) -> None:
     """Enregistre (ou remplace, si déjà noté) le score d'une offre."""
