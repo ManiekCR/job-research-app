@@ -36,7 +36,7 @@ export default async function JobsPage() {
   const { data: rawJobs, error } = await supabase
     .from("jobs")
     .select(
-      "id, title, location, is_remote, url, posted_at, source, companies(name), job_scores(final_score, reasoning, missing_skills)"
+      "id, title, location, is_remote, url, posted_at, source, is_hidden, companies(name), job_scores(final_score, reasoning, missing_skills)"
     )
     .eq("user_id", user!.id);
 
@@ -104,6 +104,12 @@ export default async function JobsPage() {
                 {" · "}
                 source : {job.source}
               </p>
+
+              {job.is_hidden && (
+                <span className="mt-2 inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                  Probablement hors LinkedIn/Indeed
+                </span>
+              )}
 
               {reasoning && (
                 <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{reasoning}</p>
