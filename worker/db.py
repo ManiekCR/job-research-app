@@ -41,12 +41,37 @@ def upsert_company(user_id: str, name: str) -> str:
     return result.data[0]["id"]
 
 
+def find_duplicate_job(user_id: str, company_id: str, title: str) -> dict | None:
+    """Cherche une offre déjà connue pour la même entreprise + le même titre
+    (comparaison insensible à la casse). Sert à fusionner une offre trouvée
+    sur plusieurs sites en une seule ligne plutôt que de la dupliquer."""
+    result = (
+        get_client()
+        .table("jobs")
+        .select("id, sources_seen")
+        .eq("user_id", user_id)
+        .eq("company_id", company_id)
+        .ilike("title", title.strip())
+        .limit(1)
+        .execute()
+    )
+    return result.data[0] if result.data else None
+
+
 def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> str | None:
-    """Insère une offre si elle n'existe pas déjà (même empreinte).
-    Renvoie l'id de la nouvelle ligne si elle a été créée, None si elle existait
-    déjà (auquel cas rien n'est modifié — on ne veut pas écraser un `is_hidden`
-    que tu aurais mis à la main plus tard, et on ne la re-note pas non plus)."""
+    """Insère une offre si elle n'existe pas déjà (même entreprise + même titre,
+    tous sites confondus). Si elle existe déjà, ajoute juste la nouvelle source
+    à `sources_seen` — on ne la duplique pas et on ne la re-note pas."""
     fingerprint = f"{job.source}:{job.external_id}"
+
+    duplicate = find_duplicate_job(user_id, company_id, job.title)
+    if duplicate is not None:
+        if job.source not in duplicate["sources_seen"]:
+            updated_sources = duplicate["sources_seen"] + [job.source]
+            get_client().table("jobs").update(
+                {"sources_seen": updated_sources}
+            ).eq("id", duplicate["id"]).execute()
+        return None
 
     result = (
         get_client()
@@ -131,6 +156,7 @@ def get_llm_credentials(user_id: str) -> dict | None:
         .execute()
     )
     return result.data if result else None
+
 
 
 def insert_job_score(user_id: str, job_id: str, score) -> None:
