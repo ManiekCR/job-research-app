@@ -1,123 +1,42 @@
 """
-Étape 4 — Scraper Arbeitnow : récupère, filtre et écrit les offres pertinentes
-dans Supabase, avec suivi de l'exécution via scrape_runs.
+Orchestrateur multi-sources : récupère les offres depuis chaque source
+indépendamment (une panne sur l'une n'empêche pas les autres de tourner),
+filtre, dédoublonne et note les offres pertinentes.
 """
 
 from __future__ import annotations
 
 import os
-import time
 import traceback
-from dataclasses import dataclass
 
-import requests
 from dotenv import load_dotenv
 
 import crypto_utils
 import db
 import scoring
+from filters import is_relevant
+from sources import adzuna, arbeitnow
+from sources.base import RawJob
 
-ARBEITNOW_URL = "https://www.arbeitnow.com/api/job-board-api"
-MAX_PAGES = 5  # l'API trie par date décroissante ; 5 pages suffisent largement pour 24h
 LOOKBACK_HOURS = 24
 
-TARGET_TITLE_KEYWORDS = [
-    "solutions engineer",
-    "solution engineer",
-    "solutions consultant",
-    "customer success",
-    "technical account manager",
-    "implementation specialist",
-    "onboarding specialist",
-    "support engineer",
-    "technical support",
-    "product operations",
-    "product analyst",
-    "business analyst",
-    "product owner",
-    "associate product manager",
-    "software engineer",
-    "fullstack engineer",
-    "full stack engineer",
-    "backend engineer",
-    "frontend engineer",
-    "front end engineer",
-]
-
-# L'API ne fournit pas de champ "pays" explicite : ce blocklist est une rustine
-# pour écarter les offres "remote" évidemment situées hors Allemagne (ex: "London").
-# À affiner à l'étape 7 (sources/dédoublonnage) si trop de faux positifs subsistent.
-NON_GERMANY_LOCATION_HINTS = [
-    "united kingdom", "london", "ireland", "dublin", "france", "paris",
-    "spain", "madrid", "barcelona", "italy", "milan", "rome",
-    "netherlands", "amsterdam", "portugal", "lisbon", "poland", "warsaw",
-    "belgium", "brussels", "austria", "vienna", "switzerland", "zurich",
-    "sweden", "stockholm", "denmark", "copenhagen", "usa", "united states",
-]
+# Chaque module de `sources` doit exposer fetch(lookback_hours) -> list[RawJob]
+# et une constante SOURCE_NAME. Ajouter une source = ajouter une ligne ici,
+# rien d'autre à toucher dans cet orchestrateur.
+SOURCE_MODULES = [arbeitnow, adzuna]
 
 
-@dataclass
-class RawJob:
-    slug: str
-    title: str
-    company_name: str
-    location: str
-    remote: bool
-    url: str
-    created_at: int  # timestamp Unix (secondes)
-    description: str
-
-
-def fetch_recent_jobs() -> list[RawJob]:
-    """Récupère les pages récentes d'Arbeitnow. L'API trie par date décroissante,
-    donc on peut s'arrêter dès qu'on sort de la fenêtre de 24h."""
-    cutoff = time.time() - LOOKBACK_HOURS * 3600
-    jobs: list[RawJob] = []
-    url: str | None = ARBEITNOW_URL
-
-    for _ in range(MAX_PAGES):
-        if not url:
-            break
-
-        response = requests.get(url, timeout=15)
-        response.raise_for_status()
-        payload = response.json()
-
-        stop = False
-        for item in payload["data"]:
-            if item["created_at"] < cutoff:
-                stop = True
-                break
-            jobs.append(
-                RawJob(
-                    slug=item["slug"],
-                    title=item["title"],
-                    company_name=item["company_name"],
-                    location=item["location"] or "",
-                    remote=item["remote"],
-                    url=item["url"],
-                    created_at=item["created_at"],
-                    description=item["description"],
-                )
-            )
-
-        if stop:
-            break
-        url = payload.get("links", {}).get("next")
-
-    return jobs
-
-
-def is_relevant(job: RawJob) -> bool:
-    """Filtre lieu (Berlin ou remote Allemagne) + titre pertinent pour le profil."""
-    location_lower = job.location.lower()
-
-    if any(hint in location_lower for hint in NON_GERMANY_LOCATION_HINTS):
-        return False
-
-    location_ok = "berlin" in location_lower or job.remote
-    title_ok = any(kw in job.title.lower() for kw in TARGET_TITLE_KEYWORDS)
-    return location_ok and title_ok
+def fetch_all_sources() -> list[RawJob]:
+    all_jobs: list[RawJob] = []
+    for module in SOURCE_MODULES:
+        try:
+            jobs = module.fetch(LOOKBACK_HOURS)
+            print(f"  [{module.SOURCE_NAME}] {len(jobs)} offre(s) récupérée(s).")
+            all_jobs.extend(jobs)
+        except Exception as error:
+            # Une source en panne ne doit pas empêcher les autres de tourner.
+            print(f"  [{module.SOURCE_NAME}] ÉCHEC : {error}")
+    return all_jobs
 
 
 def main() -> None:
@@ -129,15 +48,14 @@ def main() -> None:
     print(f"Run démarré : {scrape_run_id}")
 
     try:
-        # Chargés une seule fois pour tout le run — inutile de les redemander
-        # à chaque offre.
+        # Chargés une seule fois pour tout le run.
         profile = db.get_profile(user_id)
         creds = db.get_llm_credentials(user_id)
         api_key = crypto_utils.decrypt(creds["encrypted_key"], master_key) if creds else None
 
-        all_jobs = fetch_recent_jobs()
+        all_jobs = fetch_all_sources()
         relevant = [job for job in all_jobs if is_relevant(job)]
-        print(f"{len(all_jobs)} offres récupérées, {len(relevant)} retenues après filtrage.")
+        print(f"{len(all_jobs)} offres récupérées (toutes sources), {len(relevant)} retenues après filtrage.")
 
         new_count = 0
         for job in relevant:
@@ -145,11 +63,11 @@ def main() -> None:
             new_job_id = db.insert_job(user_id, company_id, scrape_run_id, job)
 
             if new_job_id is None:
-                print(f"  = déjà connue : {job.title} — {job.company_name}")
+                print(f"  = déjà connue [{job.source}] : {job.title} — {job.company_name}")
                 continue
 
             new_count += 1
-            print(f"  + nouvelle : {job.title} — {job.company_name}")
+            print(f"  + nouvelle [{job.source}] : {job.title} — {job.company_name}")
 
             if not creds:
                 print("    (pas de config LLM — offre non notée)")
@@ -168,8 +86,7 @@ def main() -> None:
                 db.insert_job_score(user_id, new_job_id, result)
                 print(f"    score : {result.final_score}/100")
             except Exception as scoring_error:
-                # Une offre mal notée ne doit pas faire planter tout le run —
-                # elle restera juste sans score (visible côté web comme "non notée").
+                # Une offre mal notée ne doit pas faire planter tout le run.
                 print(f"    échec du scoring : {scoring_error}")
 
         db.finish_scrape_run(

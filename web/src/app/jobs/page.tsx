@@ -2,17 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import { ScrapeButton } from "./scrape-button";
 
 // Le client Supabase (sans génération de types) type TOUJOURS un embed comme
-// un tableau, même quand une contrainte UNIQUE garantit que PostgREST renvoie
-// un objet unique à l'exécution (cas de job_scores.job_id). On corrige le
-// type ici plutôt que de parsemer des `as unknown as ...` partout.
+// un tableau. En réalité, PostgREST renvoie un objet UNIQUE (pas un tableau)
+// pour toute relation "plusieurs-vers-un" — que ce soit via une clé étrangère
+// normale (jobs.company_id -> companies.id) ou une contrainte UNIQUE sur une
+// relation inverse (job_scores.job_id). Vérifié par un vrai appel curl dans
+// les deux cas — ne pas se fier au type TypeScript ici, il ment.
 type JobScore = {
   final_score: number;
   reasoning: string | null;
   missing_skills: string[];
 } | null;
 
-function asJobScore(value: unknown): JobScore {
-  return value as JobScore;
+type Company = { name: string } | null;
+
+function asSingle<T>(value: unknown): T {
+  return value as T;
 }
 
 function scoreBadgeClass(score: number | null): string {
@@ -42,8 +46,8 @@ export default async function JobsPage() {
   // qui n'a pas cette garantie. Sans génération de types Supabase, TypeScript
   // ne connaît pas cette nuance — d'où l'accès direct plutôt que `?.[0]`.
   const jobs = [...(rawJobs ?? [])].sort((a, b) => {
-    const scoreA = asJobScore(a.job_scores)?.final_score ?? -1;
-    const scoreB = asJobScore(b.job_scores)?.final_score ?? -1;
+    const scoreA = asSingle<JobScore>(a.job_scores)?.final_score ?? -1;
+    const scoreB = asSingle<JobScore>(b.job_scores)?.final_score ?? -1;
     return scoreB - scoreA;
   });
 
@@ -64,7 +68,8 @@ export default async function JobsPage() {
 
       <ul className="mt-6 flex flex-col gap-4">
         {jobs.map((job) => {
-          const jobScore = asJobScore(job.job_scores);
+          const jobScore = asSingle<JobScore>(job.job_scores);
+          const company = asSingle<Company>(job.companies);
           const score = jobScore?.final_score ?? null;
           const reasoning = jobScore?.reasoning;
           const missingSkills = jobScore?.missing_skills ?? [];
@@ -91,7 +96,7 @@ export default async function JobsPage() {
               </div>
 
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {job.companies?.[0]?.name ?? "Entreprise inconnue"}
+                {company?.name ?? "Entreprise inconnue"}
                 {" · "}
                 {job.is_remote ? "Remote" : job.location}
                 {" · "}
