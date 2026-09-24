@@ -6,7 +6,7 @@ import time
 
 import requests
 
-from .base import RawJob
+from .base import RawJob, strip_html
 
 SOURCE_NAME = "arbeitnow"
 API_URL = "https://www.arbeitnow.com/api/job-board-api"
@@ -41,7 +41,7 @@ def fetch(lookback_hours: int) -> list[RawJob]:
                     remote=item["remote"],
                     url=item["url"],
                     created_at=item["created_at"],
-                    description=item["description"],
+                    description=strip_html(item["description"]),
                 )
             )
 

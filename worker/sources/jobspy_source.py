@@ -58,6 +58,9 @@ def fetch(lookback_hours: int) -> list[RawJob]:
                 results_wanted=15,
                 hours_old=lookback_hours,
                 country_indeed="Germany",
+                # Sans ça, LinkedIn ne renvoie pas la description complète
+                # (une requête supplémentaire par offre, désactivée par défaut).
+                linkedin_fetch_description=True,
             )
         except Exception as error:
             print(f"    [jobspy] échec sur '{term}' : {error}")

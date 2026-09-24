@@ -30,7 +30,7 @@ aucun bloc de code), avec exactement ces clés :
   "soft_skills_score": <entier 0-100>,
   "experience_score": <entier 0-100>,
   "languages_score": <entier 0-100>,
-  "missing_skills": ["compétence manquante 1", "..."],
+  "missing_skills": ["compétence manquante la plus pénalisante pour le score", "... par ordre décroissant d'impact"],
   "required_german_level": "none" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2",
   "reasoning": "2-3 phrases expliquant les scores, en français"
 }
