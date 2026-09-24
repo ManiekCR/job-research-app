@@ -5,7 +5,7 @@ filtre, dédoublonne et note les offres pertinentes.
 """
 
 from __future__ import annotations
-from sources import adzuna, arbeitnow, jobspy_source
+from sources import adzuna, arbeitnow, greenhouse, jobspy_source, lever
 
 import os
 import traceback
@@ -24,7 +24,7 @@ LOOKBACK_HOURS = 24
 # Chaque module de `sources` doit exposer fetch(lookback_hours) -> list[RawJob]
 # et une constante SOURCE_NAME. Ajouter une source = ajouter une ligne ici,
 # rien d'autre à toucher dans cet orchestrateur.
-SOURCE_MODULES = [arbeitnow, adzuna, jobspy_source]
+SOURCE_MODULES = [arbeitnow, adzuna, jobspy_source, greenhouse, lever]
 
 
 def fetch_all_sources() -> list[RawJob]:
