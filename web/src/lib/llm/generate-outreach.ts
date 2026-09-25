@@ -69,12 +69,12 @@ export async function generateOutreachMessage({
   contactRole: string | null;
   jobTitle: string;
   companyName: string;
-}): Promise<string> {
-  const { object } = await generateObject({
+}): Promise<{ content: string; tokensIn: number; tokensOut: number }> {
+  const { object, usage } = await generateObject({
     model: getLanguageModel(provider, apiKey, model),
     schema: OutreachMessageSchema,
     instructions: SYSTEM_PROMPT,
     prompt: buildPrompt({ kind, candidateName, candidateHeadline, contactName, contactRole, jobTitle, companyName }),
   });
-  return object.content;
+  return { content: object.content, tokensIn: usage.inputTokens ?? 0, tokensOut: usage.outputTokens ?? 0 };
 }

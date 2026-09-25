@@ -59,6 +59,12 @@ function buildPrompt(cv: Record<string, unknown>, jobTitle: string, jobDescripti
   ].join("\n");
 }
 
+export type TailoredApplicationWithUsage = {
+  result: TailoredApplication;
+  tokensIn: number;
+  tokensOut: number;
+};
+
 export async function generateTailoredApplication({
   provider,
   apiKey,
@@ -73,12 +79,12 @@ export async function generateTailoredApplication({
   cv: Record<string, unknown>;
   jobTitle: string;
   jobDescription: string;
-}): Promise<TailoredApplication> {
-  const { object } = await generateObject({
+}): Promise<TailoredApplicationWithUsage> {
+  const { object, usage } = await generateObject({
     model: getLanguageModel(provider, apiKey, model),
     schema: TailoredApplicationSchema,
     instructions: SYSTEM_PROMPT,
     prompt: buildPrompt(cv, jobTitle, jobDescription),
   });
-  return object;
+  return { result: object, tokensIn: usage.inputTokens ?? 0, tokensOut: usage.outputTokens ?? 0 };
 }

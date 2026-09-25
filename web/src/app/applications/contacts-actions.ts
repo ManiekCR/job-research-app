@@ -116,7 +116,7 @@ export async function generateMessage(contactId: string, kind: OutreachKind): Pr
   if (!job) return { ok: false, error: "Offre introuvable pour ce contact." };
 
   try {
-    const content = await generateOutreachMessage({
+    const { content, tokensIn, tokensOut } = await generateOutreachMessage({
       provider: creds.provider as LlmProvider,
       apiKey: decrypt(creds.encrypted_key),
       model: creds.quality_model,
@@ -127,6 +127,15 @@ export async function generateMessage(contactId: string, kind: OutreachKind): Pr
       contactRole: contact.role,
       jobTitle: job.title,
       companyName: company?.name ?? "l'entreprise",
+    });
+
+    await supabase.from("llm_usage").insert({
+      user_id: user.id,
+      call_type: "outreach_message",
+      provider: creds.provider,
+      model: creds.quality_model,
+      tokens_in: tokensIn,
+      tokens_out: tokensOut,
     });
 
     const { data: saved, error: insertError } = await supabase

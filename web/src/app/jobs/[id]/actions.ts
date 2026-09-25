@@ -74,7 +74,7 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
   const company = asSingle<{ name: string } | null>(job.companies);
 
   try {
-    const result = await generateTailoredApplication({
+    const { result: generated, tokensIn, tokensOut } = await generateTailoredApplication({
       provider: creds.provider as LlmProvider,
       apiKey,
       model: creds.quality_model,
@@ -83,9 +83,18 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
       jobDescription: job.description ?? "",
     });
 
+    await supabase.from("llm_usage").insert({
+      user_id: user.id,
+      call_type: "cv_letter",
+      provider: creds.provider,
+      model: creds.quality_model,
+      tokens_in: tokensIn,
+      tokens_out: tokensOut,
+    });
+
     const masterExperience = (cv.experience as Array<Record<string, unknown>>) ?? [];
     const experience: GeneratedExperience[] = masterExperience.map((exp, i) => {
-      const match = result.experience_highlights.find((h) => h.index === i);
+      const match = generated.experience_highlights.find((h) => h.index === i);
       return {
         title: exp.title as string,
         company: exp.company as string,
@@ -99,11 +108,11 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
     return {
       ok: true,
       data: {
-        detectedLanguage: result.detected_language,
-        headline: result.headline,
-        summary: result.summary,
+        detectedLanguage: generated.detected_language,
+        headline: generated.headline,
+        summary: generated.summary,
         experience,
-        coverLetter: result.cover_letter,
+        coverLetter: generated.cover_letter,
         name: (cv.name as string) ?? "",
         email: (cv.email as string) ?? "",
         location: (cv.location as string) ?? "",
