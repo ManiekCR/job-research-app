@@ -13,11 +13,39 @@ export default async function SettingsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: credentials } = await supabase
-    .from("llm_credentials")
-    .select("provider, fast_model, quality_model, key_last4")
-    .eq("user_id", user!.id)
-    .maybeSingle();
+  const [{ data: credentials }, { data: usageRows }] = await Promise.all([
+    supabase
+      .from("llm_credentials")
+      .select("provider, fast_model, quality_model, key_last4")
+      .eq("user_id", user!.id)
+      .maybeSingle(),
+    supabase.from("llm_usage").select("call_type, tokens_in, tokens_out, estimated_cost_usd").eq("user_id", user!.id),
+  ]);
+
+  const CALL_TYPE_LABELS: Record<string, string> = {
+    scoring: "Notation des offres",
+    cv_letter: "CV / lettres",
+    outreach_message: "Messages LinkedIn",
+  };
+
+  const totalsByType = new Map<string, { tokens: number; cost: number }>();
+  let grandTotalTokens = 0;
+  let grandTotalCost = 0;
+  let anyCostMissing = false;
+
+  for (const row of usageRows ?? []) {
+    const tokens = row.tokens_in + row.tokens_out;
+    grandTotalTokens += tokens;
+    if (row.estimated_cost_usd !== null) {
+      grandTotalCost += row.estimated_cost_usd;
+    } else {
+      anyCostMissing = true;
+    }
+    const current = totalsByType.get(row.call_type) ?? { tokens: 0, cost: 0 };
+    current.tokens += tokens;
+    current.cost += row.estimated_cost_usd ?? 0;
+    totalsByType.set(row.call_type, current);
+  }
 
   return (
     <div className="mx-auto max-w-lg px-6 py-16">
@@ -32,6 +60,30 @@ export default async function SettingsPage({
           {" · "}
           {credentials.fast_model} / {credentials.quality_model}
         </p>
+      )}
+
+      {grandTotalTokens > 0 && (
+        <div className="mt-4 rounded border border-black/10 p-4 text-sm dark:border-white/10">
+          <h2 className="font-semibold text-black dark:text-zinc-50">Usage LLM (cumulé)</h2>
+          <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+            {grandTotalTokens.toLocaleString("fr-FR")} tokens
+            {grandTotalCost > 0 && (
+              <>
+                {" "}
+                · ~{grandTotalCost.toFixed(4)} $ estimés
+                {anyCostMissing && " (partiel — certains appels sans prix connu)"}
+              </>
+            )}
+          </p>
+          <ul className="mt-2 flex flex-col gap-0.5 text-xs text-zinc-500">
+            {[...totalsByType.entries()].map(([type, totals]) => (
+              <li key={type}>
+                {CALL_TYPE_LABELS[type] ?? type} : {totals.tokens.toLocaleString("fr-FR")} tokens
+                {totals.cost > 0 && ` (~${totals.cost.toFixed(4)} $)`}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {error && (
