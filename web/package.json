@@ -12,6 +12,7 @@
     "@ai-sdk/anthropic": "^4.0.63",
     "@ai-sdk/google": "^4.0.80",
     "@ai-sdk/openai": "^4.0.75",
+    "@react-pdf/renderer": "^4.9.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.1",
     "ai": "^7.0.114",

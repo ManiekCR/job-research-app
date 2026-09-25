@@ -20,9 +20,26 @@ export type GeneratedApplication = {
   summary: string;
   experience: GeneratedExperience[];
   coverLetter: string;
+  // Champs d'identité recopiés tels quels depuis le CV maître (jamais
+  // passés au LLM) — nécessaires pour le rendu PDF complet.
+  name: string;
+  email: string;
+  location: string;
+  linkedin: string;
+  languages: { name: string; level: string }[];
+  coreSkills: string[];
+  technicalSkills: string[];
+  education: { title: string; school: string; period: string; details?: string }[];
+  // Contexte de l'offre, pour l'en-tête de la lettre de motivation.
+  companyName: string;
+  jobTitle: string;
 };
 
 export type GenerateResult = { ok: true; data: GeneratedApplication } | { ok: false; error: string };
+
+function asSingle<T>(value: unknown): T {
+  return value as T;
+}
 
 export async function generateApplication(jobId: string): Promise<GenerateResult> {
   const supabase = await createClient();
@@ -34,7 +51,12 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
   const [{ data: profile }, { data: creds }, { data: job }] = await Promise.all([
     supabase.from("profile").select("cv_json").eq("user_id", user.id).maybeSingle(),
     supabase.from("llm_credentials").select("provider, quality_model, encrypted_key").eq("user_id", user.id).maybeSingle(),
-    supabase.from("jobs").select("title, description").eq("user_id", user.id).eq("id", jobId).maybeSingle(),
+    supabase
+      .from("jobs")
+      .select("title, description, companies(name)")
+      .eq("user_id", user.id)
+      .eq("id", jobId)
+      .maybeSingle(),
   ]);
 
   if (!profile?.cv_json || Object.keys(profile.cv_json as object).length === 0) {
@@ -49,6 +71,7 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
 
   const apiKey = decrypt(creds.encrypted_key);
   const cv = profile.cv_json as Record<string, unknown>;
+  const company = asSingle<{ name: string } | null>(job.companies);
 
   try {
     const result = await generateTailoredApplication({
@@ -81,6 +104,16 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
         summary: result.summary,
         experience,
         coverLetter: result.cover_letter,
+        name: (cv.name as string) ?? "",
+        email: (cv.email as string) ?? "",
+        location: (cv.location as string) ?? "",
+        linkedin: (cv.linkedin as string) ?? "",
+        languages: (cv.languages as { name: string; level: string }[]) ?? [],
+        coreSkills: (cv.core_skills as string[]) ?? [],
+        technicalSkills: (cv.technical_skills as string[]) ?? [],
+        education: (cv.education as GeneratedApplication["education"]) ?? [],
+        companyName: company?.name ?? "l'entreprise",
+        jobTitle: job.title,
       },
     };
   } catch (error) {
