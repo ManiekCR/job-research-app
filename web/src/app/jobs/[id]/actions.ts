@@ -120,3 +120,55 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
     return { ok: false, error: `Échec de la génération : ${(error as Error).message}` };
   }
 }
+
+export type SaveDocumentResult = { ok: true } | { ok: false; error: string };
+
+export async function saveApplicationDocument(
+  jobId: string,
+  kind: "cv" | "cover_letter",
+  base64Pdf: string
+): Promise<SaveDocumentResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Non connecté." };
+
+  // Crée la candidature si elle n'existe pas encore (statut par défaut
+  // "à postuler"). Comme seuls user_id/job_id sont fournis, un conflit ne
+  // touche que ces deux colonnes identiques — le statut existant n'est
+  // jamais écrasé.
+  const { data: application, error: upsertError } = await supabase
+    .from("applications")
+    .upsert({ user_id: user.id, job_id: jobId }, { onConflict: "user_id,job_id" })
+    .select("id")
+    .single();
+
+  if (upsertError || !application) {
+    return { ok: false, error: upsertError?.message ?? "Échec de création de la candidature." };
+  }
+
+  const filename = kind === "cv" ? "cv.pdf" : "lettre.pdf";
+  const path = `${user.id}/${application.id}/${filename}`;
+  const bytes = Buffer.from(base64Pdf, "base64");
+
+  const { error: uploadError } = await supabase.storage
+    .from("application-documents")
+    .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+
+  if (uploadError) {
+    return { ok: false, error: uploadError.message };
+  }
+
+  const column = kind === "cv" ? "cv_pdf_path" : "cover_letter_pdf_path";
+  const { error: updateError } = await supabase
+    .from("applications")
+    .update({ [column]: path })
+    .eq("id", application.id);
+
+  if (updateError) {
+    return { ok: false, error: updateError.message };
+  }
+
+  return { ok: true };
+}
