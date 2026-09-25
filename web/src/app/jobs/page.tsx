@@ -59,7 +59,12 @@ export default async function JobsPage() {
         <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
           Offres ({jobs.length})
         </h1>
-        <ScrapeButton />
+        <div className="flex items-center gap-3">
+          <Link href="/applications" className="text-sm text-zinc-500 hover:underline">
+            Candidatures →
+          </Link>
+          <ScrapeButton />
+        </div>
       </div>
       <ImportUrlForm />
 
