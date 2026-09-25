@@ -148,6 +148,23 @@ export async function saveApplicationDocument(
     return { ok: false, error: upsertError?.message ?? "Échec de création de la candidature." };
   }
 
+  // Si c'est la toute première fois qu'on touche cette candidature, on
+  // enregistre un événement "création" — sinon l'historique resterait vide
+  // tant qu'aucun glisser-déposer n'a eu lieu sur le Kanban.
+  const { count: eventCount } = await supabase
+    .from("application_events")
+    .select("id", { count: "exact", head: true })
+    .eq("application_id", application.id);
+
+  if (!eventCount) {
+    await supabase.from("application_events").insert({
+      user_id: user.id,
+      application_id: application.id,
+      from_status: null,
+      to_status: "to_apply",
+    });
+  }
+
   const filename = kind === "cv" ? "cv.pdf" : "lettre.pdf";
   const path = `${user.id}/${application.id}/${filename}`;
   const bytes = Buffer.from(base64Pdf, "base64");
