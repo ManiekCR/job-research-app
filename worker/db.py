@@ -248,3 +248,25 @@ def insert_job_score(user_id: str, job_id: str, score) -> None:
         },
         on_conflict="job_id",
     ).execute()
+
+
+def log_llm_usage(
+    user_id: str,
+    call_type: str,
+    provider: str,
+    model: str,
+    tokens_in: int,
+    tokens_out: int,
+    estimated_cost_usd: float | None,
+) -> None:
+    get_client().table("llm_usage").insert(
+        {
+            "user_id": user_id,
+            "call_type": call_type,
+            "provider": provider,
+            "model": model,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "estimated_cost_usd": estimated_cost_usd,
+        }
+    ).execute()
