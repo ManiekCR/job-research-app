@@ -47,36 +47,69 @@ export async function updateApplicationStatus(
     return { ok: false, error: updateError.message };
   }
 
-  const { error: eventError } = await supabase.from("application_events").insert({
-    user_id: user.id,
-    application_id: applicationId,
-    from_status: current.status,
-    to_status: newStatus,
-  });
+  // Un statut n'est journalisé qu'une seule fois : la première fois qu'on
+  // l'atteint. "Postuler" (ou tout autre statut) est une action logique, pas
+  // un curseur — un aller-retour accidentel sur le Kanban ne doit pas laisser
+  // croire qu'elle s'est produite plusieurs fois.
+  const { count: alreadyReached } = await supabase
+    .from("application_events")
+    .select("id", { count: "exact", head: true })
+    .eq("application_id", applicationId)
+    .eq("to_status", newStatus);
 
-  if (eventError) {
-    return { ok: false, error: eventError.message };
-  }
+  const isFirstTime = !alreadyReached;
 
-  // Relance auto J+7 : seulement au premier passage en "applied", et seulement
-  // s'il n'existe pas déjà une relance non traitée pour cette candidature
-  // (évite les doublons en cas d'aller-retour sur le Kanban).
-  if (newStatus === "applied") {
-    const { count } = await supabase
-      .from("reminders")
-      .select("id", { count: "exact", head: true })
-      .eq("application_id", applicationId)
-      .eq("done", false);
+  if (isFirstTime) {
+    const { error: eventError } = await supabase.from("application_events").insert({
+      user_id: user.id,
+      application_id: applicationId,
+      from_status: current.status,
+      to_status: newStatus,
+    });
 
-    if (!count) {
-      await supabase.from("reminders").insert({
-        user_id: user.id,
-        application_id: applicationId,
-        remind_at: addDays(new Date(), FOLLOW_UP_DELAY_DAYS),
-      });
+    if (eventError) {
+      return { ok: false, error: eventError.message };
     }
   }
 
+  // Relance auto J+7 : uniquement au tout premier passage réel en "applied".
+  if (newStatus === "applied" && isFirstTime) {
+    await supabase.from("reminders").insert({
+      user_id: user.id,
+      application_id: applicationId,
+      remind_at: addDays(new Date(), FOLLOW_UP_DELAY_DAYS),
+    });
+  }
+
+  return { ok: true };
+}
+
+export async function resetApplicationHistory(applicationId: string): Promise<UpdateStatusResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Non connecté." };
+
+  // Sécurité : la carte a pu être re-déplacée entre l'appel côté client et
+  // l'écoulement du délai de confirmation — on ne réinitialise que si elle
+  // est toujours "à postuler" au moment où ce code s'exécute.
+  const { data: current } = await supabase
+    .from("applications")
+    .select("status")
+    .eq("id", applicationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!current || current.status !== "to_apply") {
+    return { ok: true };
+  }
+
+  await supabase.from("application_events").delete().eq("application_id", applicationId);
+  // Une relance en attente n'a plus de sens si on repart de zéro.
+  await supabase.from("reminders").delete().eq("application_id", applicationId).eq("done", false);
+
+  revalidatePath("/applications");
   return { ok: true };
 }
 
