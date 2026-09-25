@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { updateApplicationStatus } from "./actions";
+import { resetApplicationHistory, updateApplicationStatus } from "./actions";
+
+// Délai de confirmation avant de considérer qu'un retour à "à postuler" est
+// volontaire (et pas juste un aller-retour accidentel sur le Kanban).
+const RESET_CONFIRM_DELAY_MS = 30_000;
 
 const STATUS_ORDER = [
   "to_apply",
@@ -59,6 +63,14 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const resetTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const timers = resetTimers.current;
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
 
   async function handleDrop(newStatus: Status) {
     if (!draggedId) return;
@@ -69,6 +81,18 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
     const current = applications.find((app) => app.id === applicationId);
     if (!current || current.status === newStatus) return;
 
+    // Toute nouvelle destination annule une réinitialisation en attente pour
+    // cette carte (elle ne repose plus sur "à postuler" depuis 30s).
+    const pendingReset = resetTimers.current.get(applicationId);
+    if (pendingReset) {
+      clearTimeout(pendingReset);
+      resetTimers.current.delete(applicationId);
+    }
+
+    // Même règle que côté serveur : un statut déjà atteint ne se rejournalise
+    // pas, même si la carte y retourne après un aller-retour.
+    const existingEvents = asArray<ApplicationEvent>(current.application_events);
+    const alreadyReached = existingEvents.some((event) => event.to_status === newStatus);
     const newEvent: ApplicationEvent = {
       from_status: current.status,
       to_status: newStatus,
@@ -81,7 +105,9 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
           ? {
               ...app,
               status: newStatus,
-              application_events: [...asArray<ApplicationEvent>(app.application_events), newEvent],
+              application_events: alreadyReached
+                ? asArray<ApplicationEvent>(app.application_events)
+                : [...asArray<ApplicationEvent>(app.application_events), newEvent],
             }
           : app
       )
@@ -92,6 +118,22 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
     if (!result.ok) {
       setApplications(previous);
       setError(result.error);
+      return;
+    }
+
+    // Retour confirmé (30s sans autre déplacement) vers "à postuler" : on
+    // repart de zéro, l'historique de cette carte est effacé.
+    if (newStatus === "to_apply") {
+      const timer = setTimeout(async () => {
+        resetTimers.current.delete(applicationId);
+        const resetResult = await resetApplicationHistory(applicationId);
+        if (resetResult.ok) {
+          setApplications((prev) =>
+            prev.map((app) => (app.id === applicationId ? { ...app, application_events: [] } : app))
+          );
+        }
+      }, RESET_CONFIRM_DELAY_MS);
+      resetTimers.current.set(applicationId, timer);
     }
   }
 
