@@ -85,6 +85,10 @@ def main() -> None:
                     job_description=job.description,
                 )
                 db.insert_job_score(user_id, new_job_id, result)
+                db.log_llm_usage(
+                    user_id, "scoring", creds["provider"], creds["fast_model"],
+                    result.tokens_in, result.tokens_out, result.estimated_cost_usd,
+                )
                 print(f"    score : {result.final_score}/100")
             except Exception as scoring_error:
                 # Une offre mal notée ne doit pas faire planter tout le run.
@@ -104,6 +108,10 @@ def main() -> None:
                         job_description=job["description"],
                     )
                     db.insert_job_score(user_id, job["id"], result)
+                    db.log_llm_usage(
+                        user_id, "scoring", creds["provider"], creds["fast_model"],
+                        result.tokens_in, result.tokens_out, result.estimated_cost_usd,
+                    )
                     print(f"  (rattrapage) {job['title']} -> {result.final_score}/100")
                 except Exception as scoring_error:
                     print(f"    échec du scoring (rattrapage) sur '{job['title']}' : {scoring_error}")

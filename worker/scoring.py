@@ -49,6 +49,9 @@ class ScoreResult:
     reasoning: str
     final_score: int
     model_used: str
+    tokens_in: int
+    tokens_out: int
+    estimated_cost_usd: float | None
 
 
 def _extract_json(raw: str) -> dict:
@@ -91,6 +94,15 @@ def score_job(
         temperature=0,
     )
 
+    tokens_in = response.usage.prompt_tokens if response.usage else 0
+    tokens_out = response.usage.completion_tokens if response.usage else 0
+    try:
+        estimated_cost_usd = litellm.completion_cost(completion_response=response, model=litellm_model)
+    except Exception:
+        # Le prix de certains modèles n'est pas connu de litellm — on
+        # affiche alors les tokens seuls plutôt qu'un coût inventé.
+        estimated_cost_usd = None
+
     data = _extract_json(response.choices[0].message.content)
 
     sub_scores = {
@@ -119,4 +131,7 @@ def score_job(
         reasoning=data.get("reasoning", ""),
         final_score=final,
         model_used=model,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        estimated_cost_usd=estimated_cost_usd,
     )
