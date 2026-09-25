@@ -1,12 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import { pdf, type DocumentProps } from "@react-pdf/renderer";
 import { generateApplication, type GeneratedApplication } from "./actions";
+import { CvDocument } from "@/lib/pdf/cv-document";
+import { CoverLetterDocument } from "@/lib/pdf/cover-letter-document";
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+async function downloadPdf(document: React.ReactElement<DocumentProps>, filename: string) {
+  const blob = await pdf(document).toBlob();
+  const url = URL.createObjectURL(blob);
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export function GenerateApplication({ jobId }: { jobId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<GeneratedApplication | null>(null);
+  const [pdfLoading, setPdfLoading] = useState<"cv" | "letter" | null>(null);
 
   async function handleGenerate() {
     setLoading(true);
@@ -102,14 +120,40 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
         className="mt-1 w-full rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
       />
 
-      <button
-        type="button"
-        onClick={handleGenerate}
-        disabled={loading}
-        className="mt-3 rounded border border-black/10 px-3 py-1 text-sm dark:border-white/10"
-      >
-        {loading ? "Régénération..." : "Régénérer"}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={loading}
+          className="rounded border border-black/10 px-3 py-1 text-sm dark:border-white/10"
+        >
+          {loading ? "Régénération..." : "Régénérer"}
+        </button>
+        <button
+          type="button"
+          disabled={pdfLoading !== null}
+          onClick={async () => {
+            setPdfLoading("cv");
+            await downloadPdf(<CvDocument data={data} />, `cv-${slugify(data.companyName)}.pdf`);
+            setPdfLoading(null);
+          }}
+          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        >
+          {pdfLoading === "cv" ? "Génération du PDF..." : "Télécharger le CV (PDF)"}
+        </button>
+        <button
+          type="button"
+          disabled={pdfLoading !== null}
+          onClick={async () => {
+            setPdfLoading("letter");
+            await downloadPdf(<CoverLetterDocument data={data} />, `lettre-${slugify(data.companyName)}.pdf`);
+            setPdfLoading(null);
+          }}
+          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        >
+          {pdfLoading === "letter" ? "Génération du PDF..." : "Télécharger la lettre (PDF)"}
+        </button>
+      </div>
     </section>
   );
 }
