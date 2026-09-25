@@ -71,6 +71,20 @@ def _build_user_prompt(cv_json: dict, job_title: str, job_description: str) -> s
     )
 
 
+def compute_final_score(sub_scores: dict[str, int], weights: dict[str, int], required_german_level: str) -> int:
+    """Moyenne pondérée des sous-scores, avec la règle éliminatoire allemand
+    C1+. Extrait de score_job() pour être testable sans appel LLM."""
+    active_weights = weights if weights else DEFAULT_WEIGHTS
+    total_weight = sum(active_weights.values())
+    weighted = sum(sub_scores[k] * active_weights[k] for k in sub_scores) / total_weight
+    final = round(weighted)
+
+    if required_german_level in ("C1", "C2"):
+        final = min(final, GERMAN_C1_SCORE_CAP)
+
+    return final
+
+
 def score_job(
     *,
     provider: str,
@@ -112,14 +126,7 @@ def score_job(
         "languages": int(data["languages_score"]),
     }
 
-    active_weights = weights if weights else DEFAULT_WEIGHTS
-    total_weight = sum(active_weights.values())
-    weighted = sum(sub_scores[k] * active_weights[k] for k in sub_scores) / total_weight
-    final = round(weighted)
-
-    # Règle éliminatoire : allemand C1+ exigé -> score plafonné
-    if data.get("required_german_level") in ("C1", "C2"):
-        final = min(final, GERMAN_C1_SCORE_CAP)
+    final = compute_final_score(sub_scores, weights, data.get("required_german_level", "none"))
 
     return ScoreResult(
         hard_skills_score=sub_scores["hard_skills"],
