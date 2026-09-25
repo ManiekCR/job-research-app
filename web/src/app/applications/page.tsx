@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { KanbanBoard } from "./kanban-board";
+import { RemindersPanel } from "./reminders-panel";
 import Link from "next/link";
 
 export default async function ApplicationsPage() {
@@ -8,13 +9,24 @@ export default async function ApplicationsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: rawApplications, error } = await supabase
-    .from("applications")
-    .select(
-      "id, status, updated_at, jobs(id, title, companies(name)), application_events(from_status, to_status, created_at)"
-    )
-    .eq("user_id", user!.id)
-    .order("created_at", { foreignTable: "application_events" });
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [{ data: rawApplications, error }, { data: rawReminders }] = await Promise.all([
+    supabase
+      .from("applications")
+      .select(
+        "id, status, updated_at, jobs(id, title, companies(name)), application_events(from_status, to_status, created_at)"
+      )
+      .eq("user_id", user!.id)
+      .order("created_at", { foreignTable: "application_events" }),
+    supabase
+      .from("reminders")
+      .select("id, remind_at, note, applications(id, jobs(id, title, companies(name)))")
+      .eq("user_id", user!.id)
+      .eq("done", false)
+      .lte("remind_at", today)
+      .order("remind_at", { ascending: true }),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16">
@@ -28,6 +40,8 @@ export default async function ApplicationsPage() {
       </div>
 
       {error && <p className="mt-4 text-sm text-red-700 dark:text-red-300">Erreur : {error.message}</p>}
+
+      <RemindersPanel initialReminders={rawReminders ?? []} />
 
       <KanbanBoard initialApplications={rawApplications ?? []} />
     </div>
