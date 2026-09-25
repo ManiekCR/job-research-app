@@ -15,7 +15,7 @@ export default async function ApplicationsPage() {
     supabase
       .from("applications")
       .select(
-        "id, status, updated_at, jobs(id, title, companies(name)), application_events(from_status, to_status, created_at)"
+        "id, status, updated_at, jobs(id, title, companies(name)), application_events(from_status, to_status, created_at), contacts(id, name, role, linkedin_url, notes, created_at, outreach_messages(id, kind, content, sent_at, created_at))"
       )
       .eq("user_id", user!.id)
       .order("created_at", { foreignTable: "application_events" }),
