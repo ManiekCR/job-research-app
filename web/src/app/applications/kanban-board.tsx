@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { resetApplicationHistory, updateApplicationStatus } from "./actions";
+import { ContactsPanel, type RawContact } from "./contacts-panel";
 
 // Délai de confirmation avant de considérer qu'un retour à "à postuler" est
 // volontaire (et pas juste un aller-retour accidentel sur le Kanban).
@@ -40,6 +41,7 @@ export type RawApplication = {
   updated_at: string;
   jobs: unknown;
   application_events: unknown;
+  contacts: unknown;
 };
 
 function asSingle<T>(value: unknown): T {
@@ -64,6 +66,7 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const resetTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [expandedContactsId, setExpandedContactsId] = useState<string | null>(null);
 
   useEffect(() => {
     const timers = resetTimers.current;
@@ -194,6 +197,24 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
                           ))}
                         </ul>
                       )}
+                                            {(() => {
+                        const contacts = asArray<RawContact>(app.contacts);
+                        const isContactsExpanded = expandedContactsId === app.id;
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedContactsId(isContactsExpanded ? null : app.id)}
+                              className="mt-1 text-xs text-blue-700 hover:underline dark:text-blue-400"
+                            >
+                              {isContactsExpanded ? "Masquer les contacts" : `Contacts (${contacts.length})`}
+                            </button>
+                            {isContactsExpanded && (
+                              <ContactsPanel applicationId={app.id} initialContacts={contacts} />
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   );
                 })}
