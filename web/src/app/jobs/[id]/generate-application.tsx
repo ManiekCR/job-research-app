@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { pdf, type DocumentProps } from "@react-pdf/renderer";
-import { generateApplication, type GeneratedApplication } from "./actions";
+import { generateApplication, saveApplicationDocument, type GeneratedApplication } from "./actions";
 import { CvDocument } from "@/lib/pdf/cv-document";
 import { CoverLetterDocument } from "@/lib/pdf/cover-letter-document";
 
@@ -10,8 +10,15 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-async function downloadPdf(document: React.ReactElement<DocumentProps>, filename: string) {
-  const blob = await pdf(document).toBlob();
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = window.document.createElement("a");
   link.href = url;
@@ -25,6 +32,8 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<GeneratedApplication | null>(null);
   const [pdfLoading, setPdfLoading] = useState<"cv" | "letter" | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedKinds, setSavedKinds] = useState<Set<"cv" | "letter">>(new Set());
 
   async function handleGenerate() {
     setLoading(true);
@@ -134,7 +143,16 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
           disabled={pdfLoading !== null}
           onClick={async () => {
             setPdfLoading("cv");
-            await downloadPdf(<CvDocument data={data} />, `cv-${slugify(data.companyName)}.pdf`);
+            setSaveError(null);
+            const blob = await pdf(<CvDocument data={data} />).toBlob();
+            downloadBlob(blob, `cv-${slugify(data.companyName)}.pdf`);
+            const base64 = await blobToBase64(blob);
+            const result = await saveApplicationDocument(jobId, "cv", base64);
+            if (result.ok) {
+              setSavedKinds((prev) => new Set(prev).add("cv"));
+            } else {
+              setSaveError(result.error);
+            }
             setPdfLoading(null);
           }}
           className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
@@ -146,7 +164,16 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
           disabled={pdfLoading !== null}
           onClick={async () => {
             setPdfLoading("letter");
-            await downloadPdf(<CoverLetterDocument data={data} />, `lettre-${slugify(data.companyName)}.pdf`);
+            setSaveError(null);
+            const blob = await pdf(<CoverLetterDocument data={data} />).toBlob();
+            downloadBlob(blob, `lettre-${slugify(data.companyName)}.pdf`);
+            const base64 = await blobToBase64(blob);
+            const result = await saveApplicationDocument(jobId, "cover_letter", base64);
+            if (result.ok) {
+              setSavedKinds((prev) => new Set(prev).add("letter"));
+            } else {
+              setSaveError(result.error);
+            }
             setPdfLoading(null);
           }}
           className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
@@ -154,6 +181,17 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
           {pdfLoading === "letter" ? "Génération du PDF..." : "Télécharger la lettre (PDF)"}
         </button>
       </div>
+
+      {saveError && (
+        <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+          Téléchargé, mais pas sauvegardé dans le suivi des candidatures : {saveError}
+        </p>
+      )}
+      {savedKinds.size > 0 && (
+        <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+          Sauvegardé dans le suivi des candidatures ({[...savedKinds].join(", ")}).
+        </p>
+      )}
     </section>
   );
 }
