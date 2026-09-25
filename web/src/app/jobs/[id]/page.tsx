@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { findLearningResources } from "@/lib/learning-resources";
+import { GenerateApplication } from "./generate-application";
 
 type JobScore = {
   hard_skills_score: number;
@@ -207,6 +208,8 @@ export default async function JobDetailPage({
         </ul>
       </section>
 
+      <GenerateApplication jobId={job.id} />
+      
       <section className="mt-8">
         <h2 className="text-sm font-semibold text-black dark:text-zinc-50">Description complète</h2>
         <DescriptionBlock text={job.description ?? ""} />
