@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { findLearningResources } from "@/lib/learning-resources";
 import { GenerateApplication } from "./generate-application";
 import { PublishedDate } from "@/components/published-date";
+import { EstimateSalary } from "./estimate-salary";
+import { formatSalaryRange, type SalaryPeriod } from "@/lib/salary";
+import type { SalaryEstimateView } from "./actions";
 
 type JobScore = {
   hard_skills_score: number;
@@ -16,6 +19,16 @@ type JobScore = {
 } | null;
 
 type Company = { name: string } | null;
+
+type SalaryEstimateRow = {
+  min_eur: number;
+  max_eur: number;
+  confidence: "low" | "medium" | "high";
+  rationale: string;
+  negotiation_tips: string[];
+  model: string;
+  created_at: string;
+} | null;
 
 function asSingle<T>(value: unknown): T {
   return value as T;
@@ -85,7 +98,7 @@ export default async function JobDetailPage({
   const { data: job, error } = await supabase
     .from("jobs")
     .select(
-      "id, title, location, is_remote, url, posted_at, source, description, is_hidden, companies(name), job_scores(hard_skills_score, soft_skills_score, experience_score, languages_score, final_score, missing_skills, reasoning)"
+      "id, title, location, is_remote, url, posted_at, source, description, is_hidden, salary_min, salary_max, salary_currency, salary_period, salary_yearly_min, salary_yearly_max, salary_source, companies(name), job_scores(hard_skills_score, soft_skills_score, experience_score, languages_score, final_score, missing_skills, reasoning) , salary_estimates(min_eur, max_eur, confidence, rationale, negotiation_tips, model, created_at)"
     )
     .eq("user_id", user!.id)
     .eq("id", id)
@@ -98,6 +111,21 @@ export default async function JobDetailPage({
 
   const company = asSingle<Company>(job.companies);
   const score = asSingle<JobScore>(job.job_scores);
+  const estimateRow = asSingle<SalaryEstimateRow>(job.salary_estimates);
+  const initialEstimate: SalaryEstimateView | null = estimateRow
+    ? {
+        minEur: estimateRow.min_eur,
+        maxEur: estimateRow.max_eur,
+        confidence: estimateRow.confidence,
+        rationale: estimateRow.rationale,
+        negotiationTips: estimateRow.negotiation_tips,
+        model: estimateRow.model,
+        createdAt: estimateRow.created_at,
+      }
+    : null;
+  const offeredPeriod = job.salary_period as SalaryPeriod | null;
+  const hasOffered =
+    job.salary_min != null && job.salary_max != null && job.salary_currency && offeredPeriod;
   const techKeywords = extractTechKeywords(job.description ?? "");
   const companyLinks = company
     ? [
@@ -158,7 +186,35 @@ export default async function JobDetailPage({
           </ul>
         </section>
       )}
+      <section className="mt-8">
+        <h2 className="text-sm font-semibold text-black dark:text-zinc-50">Salary</h2>
 
+        <div className="mt-2">
+          <h3 className="text-sm font-medium text-black dark:text-zinc-50">Offered</h3>
+          {hasOffered ? (
+            <>
+              <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
+                {formatSalaryRange(job.salary_min, job.salary_max, job.salary_currency, offeredPeriod)}
+              </p>
+              {offeredPeriod !== "year" && job.salary_yearly_min != null && job.salary_yearly_max != null && (
+                <p className="text-xs text-zinc-500">
+                  ≈ {formatSalaryRange(job.salary_yearly_min, job.salary_yearly_max, job.salary_currency, "year")}
+                  {" "}(assumes full time)
+                </p>
+              )}
+              <p className="text-xs text-zinc-500">
+                {job.salary_source === "llm_extracted"
+                  ? "Extracted from the posting by the AI (quote verified in code)."
+                  : "Given by the source."}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-zinc-500">Not stated in the posting</p>
+          )}
+        </div>
+
+        <EstimateSalary jobId={job.id} initial={initialEstimate} />
+      </section>
       {score && score.missing_skills.length > 0 && (
         <section className="mt-8">
           <h2 className="text-sm font-semibold text-black dark:text-zinc-50">

@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 
 from supabase import Client, create_client
 
+from salary import normalize_to_yearly
+
 _client: Client | None = None
 
 
@@ -248,6 +250,25 @@ def insert_job_score(user_id: str, job_id: str, score) -> None:
         },
         on_conflict="job_id",
     ).execute()
+
+
+def update_job_salary(job_id: str, salary: dict | None) -> None:
+    """Stores the validated offered salary. No-op when None, so a re-run never
+    erases a salary that a source provided in structured form."""
+    if salary is None:
+        return
+    yearly_min, yearly_max = normalize_to_yearly(salary["min"], salary["max"], salary["period"])
+    get_client().table("jobs").update(
+        {
+            "salary_min": salary["min"],
+            "salary_max": salary["max"],
+            "salary_currency": salary["currency"],
+            "salary_period": salary["period"],
+            "salary_yearly_min": yearly_min,
+            "salary_yearly_max": yearly_max,
+            "salary_source": "llm_extracted",
+        }
+    ).eq("id", job_id).execute()
 
 
 def log_llm_usage(

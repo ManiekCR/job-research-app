@@ -5,7 +5,6 @@ and scores the relevant jobs.
 """
 
 from __future__ import annotations
-from sources import adzuna, arbeitnow, greenhouse, jobspy_source, lever
 
 import os
 import traceback
@@ -16,7 +15,7 @@ import crypto_utils
 import db
 import scoring
 from filters import is_relevant
-from sources import adzuna, arbeitnow
+from sources import adzuna, arbeitnow, greenhouse, jobspy_source, lever
 from sources.base import RawJob
 
 LOOKBACK_HOURS = 24
@@ -38,6 +37,30 @@ def fetch_all_sources() -> list[RawJob]:
             # A failing source must not stop the others from running.
             print(f"  [{module.SOURCE_NAME}] FAILED: {error}")
     return all_jobs
+
+
+def score_and_save(*, user_id: str, creds: dict, api_key: str, profile: dict,
+                   job_id: str, title: str, description: str) -> scoring.ScoreResult:
+    """Scores one job and stores everything that comes out of the call: the
+    score, the offered salary (if the posting states one) and the LLM usage.
+    Exceptions propagate; callers decide how to report them."""
+    result = scoring.score_job(
+        provider=creds["provider"],
+        model=creds["fast_model"],
+        api_key=api_key,
+        cv_json=profile["cv_json"],
+        weights=profile["score_weights"],
+        job_title=title,
+        job_description=description,
+    )
+    # Log usage first: the tokens are spent even if a later DB write fails.
+    db.log_llm_usage(
+        user_id, "scoring", creds["provider"], creds["fast_model"],
+        result.tokens_in, result.tokens_out, result.estimated_cost_usd,
+    )
+    db.insert_job_score(user_id, job_id, result)
+    db.update_job_salary(job_id, result.salary)
+    return result
 
 
 def main() -> None:
@@ -75,19 +98,9 @@ def main() -> None:
                 continue
 
             try:
-                result = scoring.score_job(
-                    provider=creds["provider"],
-                    model=creds["fast_model"],
-                    api_key=api_key,
-                    cv_json=profile["cv_json"],
-                    weights=profile["score_weights"],
-                    job_title=job.title,
-                    job_description=job.description,
-                )
-                db.insert_job_score(user_id, new_job_id, result)
-                db.log_llm_usage(
-                    user_id, "scoring", creds["provider"], creds["fast_model"],
-                    result.tokens_in, result.tokens_out, result.estimated_cost_usd,
+                result = score_and_save(
+                    user_id=user_id, creds=creds, api_key=api_key, profile=profile,
+                    job_id=new_job_id, title=job.title, description=job.description,
                 )
                 print(f"    score: {result.final_score}/100")
             except Exception as scoring_error:
@@ -98,19 +111,9 @@ def main() -> None:
             unscored = db.get_unscored_jobs(user_id)
             for job in unscored:
                 try:
-                    result = scoring.score_job(
-                        provider=creds["provider"],
-                        model=creds["fast_model"],
-                        api_key=api_key,
-                        cv_json=profile["cv_json"],
-                        weights=profile["score_weights"],
-                        job_title=job["title"],
-                        job_description=job["description"],
-                    )
-                    db.insert_job_score(user_id, job["id"], result)
-                    db.log_llm_usage(
-                        user_id, "scoring", creds["provider"], creds["fast_model"],
-                        result.tokens_in, result.tokens_out, result.estimated_cost_usd,
+                    result = score_and_save(
+                        user_id=user_id, creds=creds, api_key=api_key, profile=profile,
+                        job_id=job["id"], title=job["title"], description=job["description"],
                     )
                     print(f"  (catch-up) {job['title']} -> {result.final_score}/100")
                 except Exception as scoring_error:

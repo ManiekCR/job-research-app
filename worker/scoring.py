@@ -15,6 +15,8 @@ from dataclasses import dataclass
 
 import litellm
 
+from salary import validate_extracted_salary
+
 DEFAULT_WEIGHTS = {"hard_skills": 35, "experience": 25, "languages": 20, "soft_skills": 20}
 GERMAN_C1_SCORE_CAP = 40
 
@@ -32,8 +34,19 @@ no code block), with exactly these keys:
   "languages_score": <integer 0-100>,
   "missing_skills": ["most score-penalizing missing skill", "... in decreasing order of impact"],
   "required_german_level": "none" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2",
-  "reasoning": "2-3 sentences explaining the scores, in English"
+  "reasoning": "2-3 sentences explaining the scores, in English",
+  "salary": null | {
+    "min": <number or null>,
+    "max": <number or null>,
+    "currency": "<ISO 4217 code, e.g. EUR>",
+    "period": "year" | "month" | "week" | "day" | "hour",
+    "quote": "<the exact sentence from the posting stating the salary, copied verbatim>"
+  }
 }
+
+"salary" MUST be null unless the posting itself states a salary figure. Never \
+estimate or infer one. Copy figures exactly as written (min/max in the same \
+unit as the quote, e.g. 55000 for "55.000 €").
 
 Be rigorous and honest: if a key skill is missing, lower the corresponding score."""
 
@@ -52,6 +65,7 @@ class ScoreResult:
     tokens_in: int
     tokens_out: int
     estimated_cost_usd: float | None
+    salary: dict | None = None
 
 
 def _extract_json(raw: str) -> dict:
@@ -104,7 +118,7 @@ def score_job(
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": _build_user_prompt(cv_json, job_title, job_description)},
         ],
-        max_tokens=600,
+        max_tokens=800,
         temperature=0,
     )
 
@@ -141,4 +155,5 @@ def score_job(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
         estimated_cost_usd=estimated_cost_usd,
+        salary=validate_extracted_salary(data.get("salary"), job_description),
     )

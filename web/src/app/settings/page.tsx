@@ -26,6 +26,7 @@ export default async function SettingsPage({
     scoring: "Job scoring",
     cv_letter: "CV / letters",
     outreach_message: "LinkedIn messages",
+    salary_estimate: "Salary estimates",
   };
 
   const totalsByType = new Map<string, { tokens: number; cost: number }>();
