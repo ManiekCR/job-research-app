@@ -18,7 +18,7 @@ export default function LoginPage() {
       redirect(`/login?error=${encodeURIComponent(error.message)}`);
     }
 
-    redirect("/dashboard");
+    redirect("/");
   }
 
   return (
