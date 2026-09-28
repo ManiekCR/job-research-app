@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildJobsHref,
   escapeForPostgrestOr,
+  pageRange,
   parseJobsQuery,
+  totalPages,
 } from "./search-params";
 
 describe("parseJobsQuery", () => {
@@ -17,6 +19,8 @@ describe("parseJobsQuery", () => {
       days: null,
       hidden: false,
       sort: "score",
+      page: 1,
+      pageSize: 10,
     });
   });
 
@@ -31,6 +35,8 @@ describe("parseJobsQuery", () => {
       days: "7",
       hidden: "1",
       sort: "recent",
+      page: "3",
+      pageSize: "30",
     });
     expect(query).toEqual({
       q: "engineer",
@@ -42,6 +48,8 @@ describe("parseJobsQuery", () => {
       days: 7,
       hidden: true,
       sort: "recent",
+      page: 3,
+      pageSize: 30,
     });
   });
 
@@ -66,6 +74,23 @@ describe("parseJobsQuery", () => {
     const query = parseJobsQuery({ q: ["first", "second"], minScore: ["60", "80"] });
     expect(query.q).toBe("first");
     expect(query.minScore).toBe(60);
+  });
+
+  it.each(["0", "-1", "abc", "2.5", ""])("clamps page=%j to 1", (page) => {
+    expect(parseJobsQuery({ page }).page).toBe(1);
+  });
+
+  it("accepts a valid page and clamps a missing one to 1", () => {
+    expect(parseJobsQuery({ page: "7" }).page).toBe(7);
+    expect(parseJobsQuery({}).page).toBe(1);
+  });
+
+  it.each(["15", "0", "abc", "-10", ""])("falls back to 10 for pageSize=%j", (pageSize) => {
+    expect(parseJobsQuery({ pageSize }).pageSize).toBe(10);
+  });
+
+  it.each([10, 20, 30])("accepts pageSize=%i", (size) => {
+    expect(parseJobsQuery({ pageSize: String(size) }).pageSize).toBe(size);
   });
 });
 
@@ -96,6 +121,63 @@ describe("buildJobsHref", () => {
     const href = buildJobsHref(query, {});
     const params = Object.fromEntries(new URL(href, "http://x").searchParams);
     expect(parseJobsQuery(params)).toEqual(query);
+  });
+
+  it("omits page 1 and the default page size", () => {
+    expect(buildJobsHref(base, { page: 1, pageSize: 10 })).toBe("/jobs");
+  });
+
+  it("includes page and pageSize when non-default", () => {
+    expect(buildJobsHref(base, { page: 3 })).toBe("/jobs?page=3");
+    expect(buildJobsHref({ ...base, pageSize: 20 }, {})).toBe("/jobs?pageSize=20");
+  });
+
+  it("keeps the page when only the page changes", () => {
+    const query = parseJobsQuery({ page: "3", minScore: "70" });
+    expect(buildJobsHref(query, { page: 4 })).toBe("/jobs?minScore=70&page=4");
+  });
+
+  it("resets to page 1 when a filter changes", () => {
+    const query = parseJobsQuery({ page: "3" });
+    expect(buildJobsHref(query, { minScore: 70 })).toBe("/jobs?minScore=70");
+    expect(buildJobsHref(query, { sort: "recent" })).toBe("/jobs?sort=recent");
+  });
+
+  it("resets to page 1 when the page size changes", () => {
+    const query = parseJobsQuery({ page: "3" });
+    expect(buildJobsHref(query, { pageSize: 20 })).toBe("/jobs?pageSize=20");
+  });
+
+  it("lets an explicit page win alongside another change", () => {
+    const query = parseJobsQuery({ page: "3" });
+    expect(buildJobsHref(query, { pageSize: 20, page: 2 })).toBe("/jobs?page=2&pageSize=20");
+  });
+
+  it("keeps pageSize when filters change", () => {
+    const query = parseJobsQuery({ pageSize: "30" });
+    expect(buildJobsHref(query, { remote: true })).toBe("/jobs?remote=1&pageSize=30");
+  });
+});
+
+describe("pageRange", () => {
+  it("returns inclusive 0-based indexes for .range()", () => {
+    expect(pageRange(1, 20)).toEqual([0, 19]);
+    expect(pageRange(2, 20)).toEqual([20, 39]);
+    expect(pageRange(3, 10)).toEqual([20, 29]);
+    expect(pageRange(1, 30)).toEqual([0, 29]);
+  });
+});
+
+describe("totalPages", () => {
+  it("is at least 1, even with no results", () => {
+    expect(totalPages(0, 20)).toBe(1);
+  });
+
+  it("rounds up partial pages", () => {
+    expect(totalPages(1, 20)).toBe(1);
+    expect(totalPages(20, 20)).toBe(1);
+    expect(totalPages(21, 20)).toBe(2);
+    expect(totalPages(95, 10)).toBe(10);
   });
 });
 
