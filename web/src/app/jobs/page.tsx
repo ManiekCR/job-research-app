@@ -3,24 +3,25 @@ import { ScrapeButton } from "./scrape-button";
 import { ImportUrlForm } from "./import-url-form";
 import Link from "next/link";
 import { PublishedDate } from "@/components/published-date";
+import { applyFilters, applySort } from "@/lib/jobs/apply-filters";
+import { buildJobsHref, parseJobsQuery } from "@/lib/jobs/search-params";
+import { FilterBar } from "./filter-bar";
 
-// The Supabase client (without generated types) ALWAYS types an embed as an
-// array. In reality, PostgREST returns a SINGLE object (not an array) for
-// any "many-to-one" relation — whether via a regular foreign key
-// (jobs.company_id -> companies.id) or a UNIQUE constraint on a reverse
-// relation (job_scores.job_id). Verified with a real curl call in both
-// cases — don't trust the TypeScript type here, it lies.
-type JobScore = {
-  final_score: number;
+// One row of the jobs_overview view (flat: no nested objects).
+type JobRow = {
+  id: string;
+  title: string;
+  location: string | null;
+  is_remote: boolean;
+  url: string;
+  posted_at: string | null;
+  source: string;
+  is_hidden: boolean;
+  company_name: string | null;
+  final_score: number | null;
   reasoning: string | null;
-  missing_skills: string[];
-} | null;
-
-type Company = { name: string } | null;
-
-function asSingle<T>(value: unknown): T {
-  return value as T;
-}
+  missing_skills: string[] | null;
+};
 
 function scoreBadgeClass(score: number | null): string {
   if (score === null) return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
@@ -29,35 +30,31 @@ function scoreBadgeClass(score: number | null): string {
   return "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300";
 }
 
-export default async function JobsPage() {
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  // 1. URL -> clean, validated object.
+  const query = parseJobsQuery(await searchParams);
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: rawJobs, error } = await supabase
-    .from("jobs")
+  // 2. Build the database query: view -> filters -> sort.
+  const base = supabase
+    .from("jobs_overview")
     .select(
-      "id, title, location, is_remote, url, posted_at, source, is_hidden, companies(name), job_scores(final_score, reasoning, missing_skills)"
+      "id, title, location, is_remote, url, posted_at, source, is_hidden, company_name, final_score, reasoning, missing_skills"
     )
     .eq("user_id", user!.id);
+  const { data, error } = await applySort(applyFilters(base, query), query);
+  const jobs = (data ?? []) as JobRow[];
 
-  // Sorting by score happens here, client-side: unscored jobs (no
-  // job_scores row yet) are pushed to the bottom instead of breaking the
-  // sort. job_scores.job_id has a UNIQUE constraint, so PostgREST returns a
-  // single object (not an array) for this embed, unlike `companies` which
-  // has no such guarantee. Without Supabase type generation, TypeScript
-  // doesn't know this nuance — hence the direct access rather than `?.[0]`.
-  const jobs = [...(rawJobs ?? [])].sort((a, b) => {
-    const scoreA = asSingle<JobScore>(a.job_scores)?.final_score ?? -1;
-    const scoreB = asSingle<JobScore>(b.job_scores)?.final_score ?? -1;
-    if (scoreB !== scoreA) return scoreB - scoreA;
-
-    // Tie-breaker: newest first, null dates last.
-    const dateA = a.posted_at ? Date.parse(a.posted_at) : -Infinity;
-    const dateB = b.posted_at ? Date.parse(b.posted_at) : -Infinity;
-    return dateB - dateA;
-  });
+  // True when the URL contains any filter (sort alone doesn't count).
+  const hasFilters = buildJobsHref(query, { sort: "score" }) !== "/jobs";
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -73,6 +70,7 @@ export default async function JobsPage() {
         </div>
       </div>
       <ImportUrlForm />
+      <FilterBar query={query} />
 
       {error && (
         <p className="mt-4 text-sm text-red-700 dark:text-red-300">
@@ -82,11 +80,8 @@ export default async function JobsPage() {
 
       <ul className="mt-6 flex flex-col gap-4">
         {jobs.map((job) => {
-          const jobScore = asSingle<JobScore>(job.job_scores);
-          const company = asSingle<Company>(job.companies);
-          const score = jobScore?.final_score ?? null;
-          const reasoning = jobScore?.reasoning;
-          const missingSkills = jobScore?.missing_skills ?? [];
+          const score = job.final_score;
+          const missingSkills = job.missing_skills ?? [];
 
           return (
             <li
@@ -110,7 +105,7 @@ export default async function JobsPage() {
               </div>
 
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {company?.name ?? "Unknown company"}
+                {job.company_name ?? "Unknown company"}
                 {" · "}
                 {job.is_remote ? "Remote" : job.location}
                 {" · "}
@@ -132,8 +127,8 @@ export default async function JobsPage() {
                 </span>
               )}
 
-              {reasoning && (
-                <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{reasoning}</p>
+              {job.reasoning && (
+                <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{job.reasoning}</p>
               )}
 
               {missingSkills.length > 0 && (
@@ -146,10 +141,19 @@ export default async function JobsPage() {
         })}
       </ul>
 
-      {jobs.length === 0 && (
-        <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-          No jobs yet. Run a scrape.
-        </p>
+      {jobs.length === 0 && !error && (
+        <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+          {hasFilters ? (
+            <>
+              <p>No jobs match these filters.</p>
+              <Link href="/jobs" className="mt-2 inline-block text-blue-700 hover:underline dark:text-blue-400">
+                Clear filters
+              </Link>
+            </>
+          ) : (
+            <p>No jobs yet. Run a scrape.</p>
+          )}
+        </div>
       )}
     </div>
   );
