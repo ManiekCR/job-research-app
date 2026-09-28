@@ -7,7 +7,9 @@ import { triggerScrape } from "./actions";
 
 type Status = "idle" | "starting" | "waiting" | "running" | "done" | "error" | "timeout";
 
-const TIMEOUT_MS = 90_000;
+// A full run takes ~5 min (about 30 s of pip install, then every source; Xing alone waits
+// 3 s between up to 35 requests). Measured 4m45s on GitHub Actions, so leave headroom.
+const TIMEOUT_MS = 360_000;
 
 export function ScrapeButton() {
   const [status, setStatus] = useState<Status>("idle");
@@ -36,7 +38,7 @@ export function ScrapeButton() {
 
     const timeoutId = setTimeout(() => {
       setStatus("timeout");
-      setMessage("No update in 90s — check the Actions tab on GitHub.");
+      setMessage(`No update in ${TIMEOUT_MS / 60_000} min — check the Actions tab on GitHub.`);
       supabase.removeChannel(channel);
     }, TIMEOUT_MS);
 
