@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ScrapeButton } from "./scrape-button";
 import { ImportUrlForm } from "./import-url-form";
 import Link from "next/link";
+import { PublishedDate } from "@/components/published-date";
 
 // The Supabase client (without generated types) ALWAYS types an embed as an
 // array. In reality, PostgREST returns a SINGLE object (not an array) for
@@ -50,7 +51,12 @@ export default async function JobsPage() {
   const jobs = [...(rawJobs ?? [])].sort((a, b) => {
     const scoreA = asSingle<JobScore>(a.job_scores)?.final_score ?? -1;
     const scoreB = asSingle<JobScore>(b.job_scores)?.final_score ?? -1;
-    return scoreB - scoreA;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+
+    // Tie-breaker: newest first, null dates last.
+    const dateA = a.posted_at ? Date.parse(a.posted_at) : -Infinity;
+    const dateB = b.posted_at ? Date.parse(b.posted_at) : -Infinity;
+    return dateB - dateA;
   });
 
   return (
@@ -109,6 +115,8 @@ export default async function JobsPage() {
                 {job.is_remote ? "Remote" : job.location}
                 {" · "}
                 source: {job.source}
+                {" · "}
+                <PublishedDate iso={job.posted_at} />
               </p>
 
               <Link

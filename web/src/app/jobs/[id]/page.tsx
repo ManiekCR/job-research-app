@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { findLearningResources } from "@/lib/learning-resources";
 import { GenerateApplication } from "./generate-application";
+import { PublishedDate } from "@/components/published-date";
 
 type JobScore = {
   hard_skills_score: number;
@@ -130,6 +131,8 @@ export default async function JobDetailPage({
         {job.is_remote ? "Remote" : job.location}
         {" · "}
         source: {job.source}
+        {" · "}
+        <PublishedDate iso={job.posted_at} />
       </p>
 
       <a
