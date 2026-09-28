@@ -24,6 +24,7 @@ Personal, single-user project (sign-ups disabled), built as a portfolio piece fo
   - Public APIs: [Arbeitnow](https://www.arbeitnow.com/api), [Adzuna](https://developer.adzuna.com/)
   - Guest-mode platforms via [JobSpy](https://github.com/speedyapply/JobSpy) (LinkedIn, Indeed)
   - ATS career pages: Greenhouse, Lever (curated company list, each identifier manually verified — see `worker/sources/ats_companies.py`)
+  - [Xing](https://www.xing.com/jobs) (best-effort): public Berlin role landing pages and job detail pages only — `robots.txt` is checked before every request, never the disallowed search page, 3 s between requests, capped volume, and the source stops on the first 403/429. A failure never breaks the run.
   - Manual job URL import (handy for LinkedIn viewed while signed in)
   - Cross-source deduplication (the same job found on 3 sites = one row, with sources merged)
 - **1–100 matching score** — an LLM evaluates 4 sub-scores (hard skills, soft skills, experience, languages) with reasoning; **the final weighted score is computed in code**, never returned as-is by the model. Elimination rule: German C1+ required → score capped at 40.
@@ -130,3 +131,5 @@ Target < €5/month: web hosting (Vercel), database (Supabase), and email (Resen
 - $ cost not computed for web-side LLM calls (CV/letter, messages) — only tokens are tracked, for lack of a per-model pricing source equivalent to `litellm.completion_cost` on the TypeScript side.
 - Offered salary is only extracted for jobs scored after the salary feature shipped; existing jobs stay empty until re-scored.
 - $ cost isn't computed for salary estimates either (tokens only), like the other web-side LLM calls.
+- Xing salaries are not stored: the figure Xing shows is its own estimate (`SalaryEstimate`), not an offered salary. Xing jobs get their salary from the LLM extraction like every other source, so most stay empty.
+- The Xing source is best-effort: it reads Xing's internal page data (`window.crate`), which can change without notice. If it breaks, that source returns nothing and the rest of the run is unaffected.
