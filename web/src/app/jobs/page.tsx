@@ -4,7 +4,9 @@ import { ImportUrlForm } from "./import-url-form";
 import Link from "next/link";
 import { PublishedDate } from "@/components/published-date";
 import { applyFilters, applySort } from "@/lib/jobs/apply-filters";
-import { buildJobsHref, parseJobsQuery } from "@/lib/jobs/search-params";
+import { redirect } from "next/navigation";
+import { buildJobsHref, pageRange, parseJobsQuery, totalPages, DEFAULT_PAGE_SIZE } from "@/lib/jobs/search-params";
+import { Pagination } from "./pagination";
 import { FilterBar } from "./filter-bar";
 
 // One row of the jobs_overview view (flat: no nested objects).
@@ -44,23 +46,44 @@ export default async function JobsPage({
   } = await supabase.auth.getUser();
 
   // 2. Build the database query: view -> filters -> sort.
-  const base = supabase
-    .from("jobs_overview")
-    .select(
-      "id, title, location, is_remote, url, posted_at, source, is_hidden, company_name, final_score, reasoning, missing_skills"
-    )
-    .eq("user_id", user!.id);
-  const { data, error } = await applySort(applyFilters(base, query), query);
-  const jobs = (data ?? []) as JobRow[];
+const [from, to] = pageRange(query.page, query.pageSize);
+
+const base = supabase
+  .from("jobs_overview")
+  .select(
+    "id, title, location, is_remote, url, posted_at, source, is_hidden, company_name, final_score, reasoning, missing_skills",
+    { count: "exact" }
+  )
+  .eq("user_id", user!.id);
+
+const { data, error, count } = await applySort(applyFilters(base, query), query).range(from, to);
+
+// Page number too high: the database returns an error (PGRST103) and no count.
+// Get the total separately, then redirect to the last page.
+if (error?.code === "PGRST103") {
+  const { count: total } = await applyFilters(
+    supabase
+      .from("jobs_overview")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user!.id),
+    query
+  );
+  redirect(buildJobsHref(query, { page: totalPages(total ?? 0, query.pageSize) }));
+}
+
+const jobs = (data ?? []) as JobRow[];
+const total = count ?? 0;
+const pages = totalPages(total, query.pageSize);
 
   // True when the URL contains any filter (sort alone doesn't count).
-  const hasFilters = buildJobsHref(query, { sort: "score" }) !== "/jobs";
+const hasFilters =
+  buildJobsHref(query, { sort: "score", pageSize: DEFAULT_PAGE_SIZE }) !== "/jobs";
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <div className="flex items-start justify-between">
         <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-          Jobs ({jobs.length})
+          Jobs ({total})
         </h1>
         <div className="flex items-center gap-3">
           <Link href="/applications" className="text-sm text-zinc-500 hover:underline">
@@ -140,6 +163,7 @@ export default async function JobsPage({
           );
         })}
       </ul>
+      {total > 0 && <Pagination query={query} total={total} pages={pages} />}
 
       {jobs.length === 0 && !error && (
         <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">

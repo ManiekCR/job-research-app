@@ -5,6 +5,7 @@ import {
   SOURCES,
   STATUSES,
   type JobsQuery,
+  buildJobsHref
 } from "@/lib/jobs/search-params";
 
 const inputClass =
@@ -29,6 +30,7 @@ export function FilterBar({ query }: { query: JobsQuery }) {
       action="/jobs"
       className="mt-6 flex flex-col gap-3 rounded border border-black/10 p-4 dark:border-white/10"
     >
+      <input type="hidden" name="pageSize" value={query.pageSize} />
       <div className="flex flex-wrap gap-3">
         <input
           type="search"
@@ -99,7 +101,7 @@ export function FilterBar({ query }: { query: JobsQuery }) {
 
         <div className="ml-auto flex items-center gap-3">
           {activeCount > 0 && (
-            <Link href="/jobs" className="text-blue-700 hover:underline dark:text-blue-400">
+            <Link href={buildJobsHref(query, { q: "", minScore: null, source: null, status: null, loc: "", remote: false, days: null, hidden: false })} className="text-blue-700 hover:underline dark:text-blue-400">
               Clear filters ({activeCount})
             </Link>
           )}
