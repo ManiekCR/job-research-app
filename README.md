@@ -1,6 +1,6 @@
 # Job Search HQ
 
-A personal job search platform: multi-source job collection, a compatibility score against my profile computed in code (never trusted from an LLM), "hidden job" detection (not on LinkedIn/Indeed), tailored CV + cover letter generation, Kanban application tracking, automatic email follow-ups.
+A personal job search platform: multi-source job collection, a compatibility score against my profile computed in code (never trusted from an LLM), "hidden job" detection (not on LinkedIn/Indeed), offered-salary extraction and an on-demand AI salary estimate, tailored CV + cover letter generation, Kanban application tracking, automatic email follow-ups.
 
 Personal, single-user project (sign-ups disabled), built as a portfolio piece following an **"I code, AI guides"** philosophy: every feature was written by hand, one feature branch at a time, with Claude Code acting as a technical guide (explanations, review, tests) rather than auto-implementing.
 
@@ -128,3 +128,5 @@ Target < €5/month: web hosting (Vercel), database (Supabase), and email (Resen
 - No German "Lebenslauf" CV template (only one ATS-friendly variant for now).
 - The required German level is computed by the LLM on every scoring run but isn't persisted to the database (would need a dedicated migration).
 - $ cost not computed for web-side LLM calls (CV/letter, messages) — only tokens are tracked, for lack of a per-model pricing source equivalent to `litellm.completion_cost` on the TypeScript side.
+- Offered salary is only extracted for jobs scored after the salary feature shipped; existing jobs stay empty until re-scored.
+- $ cost isn't computed for salary estimates either (tokens only), like the other web-side LLM calls.

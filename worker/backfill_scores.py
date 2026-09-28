@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 import crypto_utils
 import db
-import scoring
+from main import score_and_save
 
 
 def main() -> None:
@@ -51,16 +51,10 @@ def main() -> None:
 
     for job in unscored:
         try:
-            result = scoring.score_job(
-                provider=creds["provider"],
-                model=creds["fast_model"],
-                api_key=api_key,
-                cv_json=profile["cv_json"],
-                weights=profile["score_weights"],
-                job_title=job["title"],
-                job_description=job["description"],
+            result = score_and_save(
+                user_id=user_id, creds=creds, api_key=api_key, profile=profile,
+                job_id=job["id"], title=job["title"], description=job["description"],
             )
-            db.insert_job_score(user_id, job["id"], result)
             print(f"  {job['title']} -> {result.final_score}/100")
         except Exception as error:
             print(f"  failed on '{job['title']}': {error}")

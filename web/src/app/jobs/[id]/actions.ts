@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { decrypt } from "@/lib/crypto";
 import { generateTailoredApplication } from "@/lib/llm/generate-application";
 import type { LlmProvider } from "@/lib/llm/test-key";
+import { revalidatePath } from "next/cache";
+import { estimateSalary } from "@/lib/llm/estimate-salary";
+import { checkEstimateBounds } from "@/lib/salary";
 
 export type GeneratedExperience = {
   title: string;
@@ -197,4 +200,117 @@ export async function saveApplicationDocument(
   }
 
   return { ok: true };
+}
+
+export type SalaryEstimateView = {
+  minEur: number;
+  maxEur: number;
+  confidence: "low" | "medium" | "high";
+  rationale: string;
+  negotiationTips: string[];
+  model: string;
+  createdAt: string;
+};
+
+export type EstimateSalaryResult = { ok: true; data: SalaryEstimateView } | { ok: false; error: string };
+
+export async function estimateSalaryForJob(jobId: string): Promise<EstimateSalaryResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in." };
+
+  const [{ data: profile }, { data: creds }, { data: job }] = await Promise.all([
+    supabase.from("profile").select("cv_json").eq("user_id", user.id).maybeSingle(),
+    supabase.from("llm_credentials").select("provider, quality_model, encrypted_key").eq("user_id", user.id).maybeSingle(),
+    supabase
+      .from("jobs")
+      .select("title, description, location, companies(name)")
+      .eq("user_id", user.id)
+      .eq("id", jobId)
+      .maybeSingle(),
+  ]);
+
+  if (!profile?.cv_json || Object.keys(profile.cv_json as object).length === 0) {
+    return { ok: false, error: "No master CV saved — complete your profile first." };
+  }
+  if (!creds) {
+    return { ok: false, error: "No LLM key configured — go to Settings." };
+  }
+  if (!job) {
+    return { ok: false, error: "Job not found." };
+  }
+
+  const apiKey = decrypt(creds.encrypted_key);
+  const company = asSingle<{ name: string } | null>(job.companies);
+
+  try {
+    const estimate = await estimateSalary({
+      provider: creds.provider as LlmProvider,
+      apiKey,
+      model: creds.quality_model,
+      cv: profile.cv_json as Record<string, unknown>,
+      jobTitle: job.title,
+      companyName: company?.name ?? "unknown company",
+      location: job.location,
+      jobDescription: job.description ?? "",
+    });
+
+    // Log first: the tokens are spent even if the estimate is rejected below.
+    await supabase.from("llm_usage").insert({
+      user_id: user.id,
+      call_type: "salary_estimate",
+      provider: creds.provider,
+      model: creds.quality_model,
+      tokens_in: estimate.tokensIn,
+      tokens_out: estimate.tokensOut,
+    });
+
+    // The LLM's numbers are never trusted as returned.
+    const bounds = checkEstimateBounds(estimate.minEur, estimate.maxEur);
+    if (!bounds.ok) {
+      return { ok: false, error: `The estimate was rejected (${bounds.reason}). Try regenerating.` };
+    }
+
+    const { data: saved, error: saveError } = await supabase
+      .from("salary_estimates")
+      .upsert(
+        {
+          user_id: user.id,
+          job_id: jobId,
+          min_eur: bounds.min,
+          max_eur: bounds.max,
+          confidence: estimate.confidence,
+          rationale: estimate.rationale,
+          negotiation_tips: estimate.negotiationTips,
+          model: creds.quality_model,
+          created_at: new Date().toISOString(), // upsert must refresh the date on regenerate
+        },
+        { onConflict: "job_id" }
+      )
+      .select("created_at")
+      .single();
+
+    if (saveError || !saved) {
+      return { ok: false, error: saveError?.message ?? "Failed to save the estimate." };
+    }
+
+    revalidatePath(`/jobs/${jobId}`);
+
+    return {
+      ok: true,
+      data: {
+        minEur: bounds.min,
+        maxEur: bounds.max,
+        confidence: estimate.confidence,
+        rationale: estimate.rationale,
+        negotiationTips: estimate.negotiationTips,
+        model: creds.quality_model,
+        createdAt: saved.created_at,
+      },
+    };
+  } catch (error) {
+    return { ok: false, error: `Estimation failed: ${(error as Error).message}` };
+  }
 }

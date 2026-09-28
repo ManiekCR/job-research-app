@@ -62,7 +62,7 @@ No further steps are planned. Treat any new request as a fresh ask, not a "step 
 
 ## Known gaps / deliberately not done
 
-See the "What's not done" section of the root `README.md` for the current list (ATS company list is a ~10-company starter vs. a ~150 target, no German "Lebenslauf" CV template variant, required German level isn't persisted to the DB, no $ cost estimate for web-side LLM calls). Keep that section and this file in sync if either changes.
+See the "What's not done" section of the root `README.md` for the current list (ATS company list is a ~10-company starter vs. a ~150 target, no German "Lebenslauf" CV template variant, required German level isn't persisted to the DB, no $ cost estimate for web-side LLM calls, no $ cost estimate for web-side LLM calls (CV/letter, messages, salary estimates), offered salary is empty for jobs scored before F2). Keep that section and this file in sync if either changes.
 
 ## Key locations
 
