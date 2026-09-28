@@ -15,7 +15,7 @@ import crypto_utils
 import db
 import scoring
 from filters import is_relevant
-from sources import adzuna, arbeitnow, greenhouse, jobspy_source, lever
+from sources import adzuna, arbeitnow, greenhouse, jobspy_source, lever, xing
 from sources.base import RawJob
 
 LOOKBACK_HOURS = 24
@@ -23,7 +23,8 @@ LOOKBACK_HOURS = 24
 # Every module in `sources` must expose fetch(lookback_hours) -> list[RawJob]
 # and a SOURCE_NAME constant. Adding a source = adding one line here,
 # nothing else to touch in this orchestrator.
-SOURCE_MODULES = [arbeitnow, adzuna, jobspy_source, greenhouse, lever]
+# Xing goes last: it is deliberately slow (3 s between requests), so it never delays the others.
+SOURCE_MODULES = [arbeitnow, adzuna, jobspy_source, greenhouse, lever, xing]
 
 
 def fetch_all_sources() -> list[RawJob]:
