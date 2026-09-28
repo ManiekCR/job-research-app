@@ -1,7 +1,7 @@
--- Suivi des tokens/coût LLM : une ligne par appel (scoring, CV+lettre,
--- message LinkedIn). Le coût est estimé quand on peut le calculer (le
--- worker Python le fait via litellm.completion_cost) ; sinon NULL — on
--- affiche alors seulement les tokens, jamais un chiffre inventé.
+-- LLM token/cost tracking: one row per call (scoring, CV+letter,
+-- LinkedIn message). The cost is estimated when it can be computed (the
+-- Python worker does it via litellm.completion_cost); otherwise NULL —
+-- only the tokens are shown then, never a made-up number.
 create table llm_usage (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,

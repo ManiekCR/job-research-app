@@ -12,18 +12,18 @@ export async function saveLlmCredentials(formData: FormData) {
   const qualityModel = (formData.get("qualityModel") as string).trim();
 
   if (!apiKey || !fastModel || !qualityModel) {
-    redirect("/settings?error=" + encodeURIComponent("Tous les champs sont requis."));
+    redirect("/settings?error=" + encodeURIComponent("All fields are required."));
   }
 
-  // 1. On vérifie la clé AVANT de payer le coût d'un chiffrement + écriture en base
+  // 1. Verify the key BEFORE paying the cost of an encryption + database write
   const test = await testLlmKey(provider, apiKey);
   if (!test.valid) {
     redirect("/settings?error=" + encodeURIComponent(test.error));
   }
 
-  // 2. On confirme qui est connecté (défense en profondeur : même si /settings
-  //    est déjà protégée par le vigile, une Server Action reste un endpoint
-  //    public — on revérifie ici, comme recommandé par la doc Next.js).
+  // 2. Confirm who's signed in (defense in depth: even though /settings is
+  //    already protected by the middleware, a Server Action remains a
+  //    public endpoint — re-checked here, as recommended by the Next.js docs).
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,8 +33,8 @@ export async function saveLlmCredentials(formData: FormData) {
     redirect("/login");
   }
 
-  // 3. Chiffrement + écriture. `upsert` avec la contrainte unique(user_id)
-  //    remplace la ligne existante plutôt que d'en créer une deuxième.
+  // 3. Encrypt + write. `upsert` with the unique(user_id) constraint
+  //    replaces the existing row rather than creating a second one.
   const { error } = await supabase.from("llm_credentials").upsert(
     {
       user_id: user.id,

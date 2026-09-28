@@ -1,8 +1,8 @@
 """
-Connexion à Supabase et écriture en base pour le worker.
-Utilise la clé service_role : cette clé contourne RLS (Row Level Security),
-elle ne doit JAMAIS quitter l'environnement du worker (jamais dans le code du site web,
-jamais commitée).
+Supabase connection and database writes for the worker.
+Uses the service_role key: this key bypasses RLS (Row Level Security),
+it must NEVER leave the worker's environment (never in the website code,
+never committed).
 """
 
 from __future__ import annotations
@@ -25,8 +25,8 @@ def get_client() -> Client:
 
 
 def upsert_company(user_id: str, name: str) -> str:
-    """Crée l'entreprise si elle n'existe pas, ou retrouve son id si elle existe déjà
-    (comparaison sur le nom normalisé). Renvoie toujours l'id."""
+    """Creates the company if it doesn't exist, or looks up its id if it
+    already does (comparison on the normalized name). Always returns the id."""
     normalized = name.strip().lower()
 
     result = (
@@ -42,9 +42,9 @@ def upsert_company(user_id: str, name: str) -> str:
 
 
 def find_duplicate_job(user_id: str, company_id: str, title: str) -> dict | None:
-    """Cherche une offre déjà connue pour la même entreprise + le même titre
-    (comparaison insensible à la casse). Sert à fusionner une offre trouvée
-    sur plusieurs sites en une seule ligne plutôt que de la dupliquer."""
+    """Looks for an already-known job for the same company + the same title
+    (case-insensitive comparison). Used to merge a job found on several
+    sites into a single row instead of duplicating it."""
     result = (
         get_client()
         .table("jobs")
@@ -59,11 +59,11 @@ def find_duplicate_job(user_id: str, company_id: str, title: str) -> dict | None
 
 
 def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> str | None:
-    """Insère une offre si elle n'existe pas déjà (même entreprise + même titre,
-    tous sites confondus). Si elle existe déjà, ajoute juste la nouvelle source
-    à `sources_seen` (et rafraîchit la description si celle-ci a changé — utile
-    si elle était vide ou mal nettoyée lors du premier passage) — on ne la
-    duplique pas et on ne la re-note pas."""
+    """Inserts a job if it doesn't already exist (same company + same title,
+    across all sites). If it already exists, just adds the new source to
+    `sources_seen` (and refreshes the description if it has changed — useful
+    if it was empty or poorly cleaned on the first pass) — it is neither
+    duplicated nor re-scored."""
     fingerprint = f"{job.source}:{job.external_id}"
 
     duplicate = find_duplicate_job(user_id, company_id, job.title)
@@ -103,7 +103,7 @@ def insert_job(user_id: str, company_id: str, scrape_run_id: str, job) -> str | 
     return result.data[0]["id"] if result.data else None
 
 def create_scrape_run(user_id: str) -> str:
-    """Crée une ligne 'run en cours', renvoie son id."""
+    """Creates a 'run in progress' row, returns its id."""
     result = (
         get_client()
         .table("scrape_runs")
@@ -120,7 +120,7 @@ def finish_scrape_run(
     jobs_new: int,
     log: str | None = None,
 ) -> None:
-    """Marque le run comme terminé (ou en erreur) avec ses statistiques."""
+    """Marks the run as finished (or errored) with its stats."""
     get_client().table("scrape_runs").update(
         {
             "status": status,
@@ -133,7 +133,7 @@ def finish_scrape_run(
 
 
 def get_profile(user_id: str) -> dict:
-    """Renvoie le CV maître + les poids de score. Valeurs vides si rien n'est configuré."""
+    """Returns the master CV + score weights. Empty values if nothing is configured."""
     result = (
         get_client()
         .table("profile")
@@ -142,15 +142,15 @@ def get_profile(user_id: str) -> dict:
         .maybe_single()
         .execute()
     )
-    # maybe_single() renvoie carrément None (pas un objet avec .data vide)
-    # quand 0 ligne correspond — piège classique de cette librairie.
+    # maybe_single() returns None outright (not an object with empty .data)
+    # when 0 rows match — a classic gotcha of this library.
     if result is None:
         return {"cv_json": {}, "score_weights": {}}
     return result.data
 
 
 def get_llm_credentials(user_id: str) -> dict | None:
-    """Renvoie la config LLM (clé encore chiffrée à ce stade)."""
+    """Returns the LLM config (key still encrypted at this stage)."""
     result = (
         get_client()
         .table("llm_credentials")
@@ -163,9 +163,9 @@ def get_llm_credentials(user_id: str) -> dict | None:
 
 
 def get_unscored_jobs(user_id: str) -> list[dict]:
-    """Renvoie les offres qui n'ont pas encore de score — typiquement des offres
-    importées manuellement (qui ne passent pas par insert_job pendant un run),
-    ou dont le scoring avait échoué lors d'un run précédent."""
+    """Returns jobs that don't have a score yet — typically manually
+    imported jobs (which don't go through insert_job during a run), or ones
+    whose scoring failed on a previous run."""
     scored_job_ids = {
         row["job_id"]
         for row in get_client()
@@ -187,11 +187,11 @@ def get_unscored_jobs(user_id: str) -> list[dict]:
 
 
 def update_hidden_badges(user_id: str) -> None:
-    """Marque comme 'probablement cachée' toute offre qui ne vient d'aucune
-    grande plateforme (LinkedIn/Indeed) et dont aucun équivalent (même
-    entreprise + titre similaire) n'existe sur ces plateformes dans les 30
-    derniers jours. Recalculé entièrement à chaque run : une offre peut
-    redevenir visible si une offre similaire est découverte plus tard."""
+    """Marks as 'probably hidden' any job that doesn't come from a major
+    platform (LinkedIn/Indeed) and has no equivalent (same company + similar
+    title) on those platforms in the last 30 days. Fully recomputed on every
+    run: a job can become visible again if a similar listing is discovered
+    later."""
     jobs = (
         get_client()
         .table("jobs")
@@ -202,10 +202,10 @@ def update_hidden_badges(user_id: str) -> None:
     )
 
     for job in jobs:
-        # Pas seulement `source` (l'origine du tout premier scraping) : une
-        # offre trouvée d'abord ailleurs puis fusionnée avec une copie
-        # LinkedIn/Indeed (dédoublonnage 7.4) a `sources_seen` mis à jour
-        # mais garde son `source` d'origine.
+        # Not just `source` (where the very first scrape found it): a job
+        # found elsewhere first and later merged with a LinkedIn/Indeed copy
+        # (cross-source dedup) has `sources_seen` updated but keeps its
+        # original `source`.
         seen_big_platform = job["source"] in ("linkedin", "indeed") or any(
             s in ("linkedin", "indeed") for s in job["sources_seen"]
         )
@@ -230,9 +230,9 @@ def update_hidden_badges(user_id: str) -> None:
         if is_hidden != job["is_hidden"]:
             get_client().table("jobs").update({"is_hidden": is_hidden}).eq("id", job["id"]).execute()
 
-            
+
 def insert_job_score(user_id: str, job_id: str, score) -> None:
-    """Enregistre (ou remplace, si déjà noté) le score d'une offre."""
+    """Saves (or replaces, if already scored) a job's score."""
     get_client().table("job_scores").upsert(
         {
             "user_id": user_id,

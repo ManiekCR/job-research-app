@@ -1,7 +1,7 @@
--- Assure que gen_random_uuid() est disponible pour générer des identifiants uniques
+-- Ensures gen_random_uuid() is available to generate unique identifiers
 create extension if not exists "pgcrypto";
 
--- 1 ligne = ton CV structuré + les poids du score (modifiables plus tard)
+-- 1 row = your structured CV + the score weights (editable later)
 create table profile (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -11,7 +11,7 @@ create table profile (
   updated_at timestamptz not null default now()
 );
 
--- Ta clé LLM personnelle (chiffrée avant d'arriver ici, jamais en clair)
+-- Your personal LLM key (encrypted before it gets here, never stored in clear text)
 create table llm_credentials (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -23,7 +23,7 @@ create table llm_credentials (
   created_at timestamptz not null default now()
 );
 
--- Entreprises découvertes pendant le scraping
+-- Companies discovered during scraping
 create table companies (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -37,7 +37,7 @@ create table companies (
   unique (user_id, normalized_name)
 );
 
--- Un run de scraping = une exécution du bouton "Scraper"
+-- A scrape run = one execution of the "Scrape" button
 create table scrape_runs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -49,7 +49,7 @@ create table scrape_runs (
   finished_at timestamptz
 );
 
--- Les offres d'emploi elles-mêmes
+-- The job postings themselves
 create table jobs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -70,7 +70,7 @@ create table jobs (
   unique (user_id, fingerprint)
 );
 
--- Le score de matching calculé pour chaque offre
+-- The matching score computed for each job
 create table job_scores (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -86,7 +86,7 @@ create table job_scores (
   created_at timestamptz not null default now()
 );
 
--- Liens d'apprentissage curés par compétence
+-- Curated learning links per skill
 create table learning_resources (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -97,8 +97,8 @@ create table learning_resources (
 );
 
 -- ===== Row Level Security =====
--- Chaque table : verrouillée par défaut, une seule règle "le propriétaire
--- de la ligne (auth.uid()) peut tout faire dessus (lire/écrire/modifier/supprimer)".
+-- Every table: locked by default, a single rule "the row's owner
+-- (auth.uid()) can do everything on it (read/write/update/delete)".
 alter table profile enable row level security;
 create policy "Owner can manage their profile" on profile
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

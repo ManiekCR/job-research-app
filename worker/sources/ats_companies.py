@@ -1,12 +1,11 @@
-"""Liste curée d'entreprises avec l'identifiant technique attendu par l'API
-publique de leur ATS. Chaque entrée a été vérifiée manuellement (requête
-réelle, code 200) avant d'être ajoutée — ne jamais deviner un identifiant
-sans le tester.
+"""Curated list of companies with the technical identifier expected by their
+ATS's public API. Every entry was manually verified (real request, 200
+status) before being added — never guess an identifier without testing it.
 
-Liste de départ volontairement modeste (le plan visait ~150 entreprises) :
-à enrichir au fil du temps, à la main ou via une future auto-détection
-(dès qu'une offre d'une autre source pointe vers une page Greenhouse/Lever,
-en extraire l'identifiant)."""
+Deliberately modest starter list (the plan aimed for ~150 companies): meant
+to grow over time, by hand or via future auto-detection (as soon as a job
+from another source points to a Greenhouse/Lever page, extract its
+identifier from it)."""
 
 from __future__ import annotations
 
@@ -21,8 +20,8 @@ GREENHOUSE_COMPANIES = [
     "solarisbank",
 ]
 
-# Lever ne renvoie pas de nom d'entreprise "présentable" dans son API (juste
-# l'identifiant technique) — on le fournit nous-mêmes.
+# Lever doesn't return a "presentable" company name in its API (just the
+# technical identifier) — we supply it ourselves.
 LEVER_COMPANIES = [
     ("ppro", "PPRO"),
     ("brevo", "Brevo"),

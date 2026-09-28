@@ -1,4 +1,4 @@
-"""Filtres appliqués à toutes les sources, une fois les offres collectées."""
+"""Filters applied to all sources, once jobs have been collected."""
 
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ TARGET_TITLE_KEYWORDS = [
     "front end engineer",
 ]
 
-# L'API ne fournit pas toujours un champ "pays" explicite : ce blocklist écarte
-# les offres "remote" évidemment situées hors Allemagne (ex: "London").
+# The API doesn't always provide an explicit "country" field: this blocklist
+# rules out "remote" jobs that are obviously located outside Germany (e.g. "London").
 NON_GERMANY_LOCATION_HINTS = [
     "united kingdom", "london", "ireland", "dublin", "france", "paris",
     "spain", "madrid", "barcelona", "italy", "milan", "rome",
@@ -37,7 +37,7 @@ NON_GERMANY_LOCATION_HINTS = [
 
 
 def is_relevant(job) -> bool:
-    """Filtre lieu (Berlin ou remote Allemagne) + titre pertinent pour le profil."""
+    """Filters on location (Berlin or remote Germany) + title relevant to the profile."""
     location_lower = job.location.lower()
 
     if any(hint in location_lower for hint in NON_GERMANY_LOCATION_HINTS):

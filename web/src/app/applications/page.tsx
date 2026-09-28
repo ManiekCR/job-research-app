@@ -32,14 +32,14 @@ export default async function ApplicationsPage() {
     <div className="mx-auto max-w-6xl px-6 py-16">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-          Candidatures ({rawApplications?.length ?? 0})
+          Applications ({rawApplications?.length ?? 0})
         </h1>
         <Link href="/jobs" className="text-sm text-zinc-500 hover:underline">
-          ← Offres
+          ← Jobs
         </Link>
       </div>
 
-      {error && <p className="mt-4 text-sm text-red-700 dark:text-red-300">Erreur : {error.message}</p>}
+      {error && <p className="mt-4 text-sm text-red-700 dark:text-red-300">Error: {error.message}</p>}
 
       <RemindersPanel initialReminders={rawReminders ?? []} />
 

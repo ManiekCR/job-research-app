@@ -1,6 +1,6 @@
--- Relances : une ligne = "recontacter cette candidature à telle date".
--- Créée automatiquement (J+7) quand une candidature passe au statut "applied",
--- mais reste modifiable/supprimable à la main (date, note).
+-- Reminders: one row = "follow up on this application on this date".
+-- Created automatically (7 days later) when an application moves to the
+-- "applied" status, but stays manually editable/deletable (date, note).
 create table reminders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -11,7 +11,7 @@ create table reminders (
   created_at timestamptz not null default now()
 );
 
--- Personnes rencontrées/contactées pour une candidature (recruteur, employé...).
+-- People met/contacted for an application (recruiter, employee...).
 create table contacts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -23,8 +23,8 @@ create table contacts (
   created_at timestamptz not null default now()
 );
 
--- Brouillons de messages LinkedIn générés pour un contact (jamais envoyés
--- automatiquement — copier/coller manuel dans LinkedIn, cf. plan F8).
+-- Drafts of LinkedIn messages generated for a contact (never sent
+-- automatically — manual copy/paste into LinkedIn, see plan section F8).
 create table outreach_messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,

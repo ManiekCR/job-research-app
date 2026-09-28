@@ -12,7 +12,7 @@ export async function saveProfile(formData: FormData) {
   } catch {
     redirect(
       "/profile?error=" +
-        encodeURIComponent("JSON invalide — vérifie les virgules et guillemets.")
+        encodeURIComponent("Invalid JSON — check the commas and quotes.")
     );
   }
 

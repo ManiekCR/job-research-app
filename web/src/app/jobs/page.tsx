@@ -3,12 +3,12 @@ import { ScrapeButton } from "./scrape-button";
 import { ImportUrlForm } from "./import-url-form";
 import Link from "next/link";
 
-// Le client Supabase (sans génération de types) type TOUJOURS un embed comme
-// un tableau. En réalité, PostgREST renvoie un objet UNIQUE (pas un tableau)
-// pour toute relation "plusieurs-vers-un" — que ce soit via une clé étrangère
-// normale (jobs.company_id -> companies.id) ou une contrainte UNIQUE sur une
-// relation inverse (job_scores.job_id). Vérifié par un vrai appel curl dans
-// les deux cas — ne pas se fier au type TypeScript ici, il ment.
+// The Supabase client (without generated types) ALWAYS types an embed as an
+// array. In reality, PostgREST returns a SINGLE object (not an array) for
+// any "many-to-one" relation — whether via a regular foreign key
+// (jobs.company_id -> companies.id) or a UNIQUE constraint on a reverse
+// relation (job_scores.job_id). Verified with a real curl call in both
+// cases — don't trust the TypeScript type here, it lies.
 type JobScore = {
   final_score: number;
   reasoning: string | null;
@@ -41,12 +41,12 @@ export default async function JobsPage() {
     )
     .eq("user_id", user!.id);
 
-  // Le tri par score se fait ici, côté JS : les offres non notées (pas encore
-  // de ligne job_scores) sont reléguées en bas plutôt que de casser le tri.
-  // job_scores.job_id a une contrainte UNIQUE : PostgREST renvoie donc un
-  // objet unique (pas un tableau) pour cet embed, contrairement à `companies`
-  // qui n'a pas cette garantie. Sans génération de types Supabase, TypeScript
-  // ne connaît pas cette nuance — d'où l'accès direct plutôt que `?.[0]`.
+  // Sorting by score happens here, client-side: unscored jobs (no
+  // job_scores row yet) are pushed to the bottom instead of breaking the
+  // sort. job_scores.job_id has a UNIQUE constraint, so PostgREST returns a
+  // single object (not an array) for this embed, unlike `companies` which
+  // has no such guarantee. Without Supabase type generation, TypeScript
+  // doesn't know this nuance — hence the direct access rather than `?.[0]`.
   const jobs = [...(rawJobs ?? [])].sort((a, b) => {
     const scoreA = asSingle<JobScore>(a.job_scores)?.final_score ?? -1;
     const scoreB = asSingle<JobScore>(b.job_scores)?.final_score ?? -1;
@@ -57,11 +57,11 @@ export default async function JobsPage() {
     <div className="mx-auto max-w-3xl px-6 py-16">
       <div className="flex items-start justify-between">
         <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-          Offres ({jobs.length})
+          Jobs ({jobs.length})
         </h1>
         <div className="flex items-center gap-3">
           <Link href="/applications" className="text-sm text-zinc-500 hover:underline">
-            Candidatures →
+            Applications →
           </Link>
           <ScrapeButton />
         </div>
@@ -70,7 +70,7 @@ export default async function JobsPage() {
 
       {error && (
         <p className="mt-4 text-sm text-red-700 dark:text-red-300">
-          Erreur : {error.message}
+          Error: {error.message}
         </p>
       )}
 
@@ -99,28 +99,28 @@ export default async function JobsPage() {
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${scoreBadgeClass(score)}`}
                 >
-                  {score !== null ? `${score}/100` : "non noté"}
+                  {score !== null ? `${score}/100` : "unscored"}
                 </span>
               </div>
 
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {company?.name ?? "Entreprise inconnue"}
+                {company?.name ?? "Unknown company"}
                 {" · "}
                 {job.is_remote ? "Remote" : job.location}
                 {" · "}
-                source : {job.source}
+                source: {job.source}
               </p>
-              
+
               <Link
                 href={`/jobs/${job.id}`}
                 className="mt-2 inline-block text-sm text-blue-700 hover:underline dark:text-blue-400"
               >
-                Voir les détails →
+                View details →
               </Link>
 
               {job.is_hidden && (
                 <span className="mt-2 inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-950 dark:text-purple-300">
-                  Probablement hors LinkedIn/Indeed
+                  Probably not on LinkedIn/Indeed
                 </span>
               )}
 
@@ -130,7 +130,7 @@ export default async function JobsPage() {
 
               {missingSkills.length > 0 && (
                 <p className="mt-1 text-xs text-zinc-500">
-                  Manque : {missingSkills.join(", ")}
+                  Missing: {missingSkills.join(", ")}
                 </p>
               )}
             </li>
@@ -140,7 +140,7 @@ export default async function JobsPage() {
 
       {jobs.length === 0 && (
         <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Aucune offre pour l&apos;instant. Lance un scraping.
+          No jobs yet. Run a scrape.
         </p>
       )}
     </div>

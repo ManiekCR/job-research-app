@@ -1,4 +1,4 @@
-"""Adaptateur Arbeitnow : job board centré Allemagne, API publique sans clé."""
+"""Arbeitnow adapter: Germany-focused job board, public API, no key needed."""
 
 from __future__ import annotations
 

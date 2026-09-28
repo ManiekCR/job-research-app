@@ -1,10 +1,10 @@
 """
-Adaptateur JobSpy : scrape LinkedIn et Indeed en mode invité (sans connexion),
-via la librairie python-jobspy. Contrairement aux APIs propres (Arbeitnow,
-Adzuna), c'est du scraping de vraies pages web — plus lent et plus fragile
-aux blocages, donc on limite le nombre de recherches et chaque appel est
-protégé individuellement (un mot-clé bloqué ne doit pas faire perdre les
-résultats déjà obtenus sur les autres).
+JobSpy adapter: scrapes LinkedIn and Indeed in guest mode (no login), via
+the python-jobspy library. Unlike proper APIs (Arbeitnow, Adzuna), this is
+scraping real web pages — slower and more fragile against blocking, so the
+number of searches is kept limited and each call is protected individually
+(one blocked keyword must not lose the results already obtained from the
+others).
 """
 
 from __future__ import annotations
@@ -18,9 +18,9 @@ from .base import RawJob
 
 SOURCE_NAME = "jobspy"
 
-# Sous-ensemble volontairement restreint du cœur de cible (pas les 20 mots-clés
-# de filters.py) : chaque terme = un scraping de page par site, à ne pas
-# multiplier inutilement.
+# Deliberately narrow subset of the core target (not the 20 keywords from
+# filters.py): each term = one page scrape per site, not to be multiplied
+# needlessly.
 SEARCH_TERMS = [
     "solutions engineer",
     "customer success",
@@ -37,9 +37,9 @@ def _to_timestamp(date_posted) -> int:
 
 
 def _str(value, default: str = "") -> str:
-    # pandas représente les valeurs manquantes par NaN (un float) — et
-    # `nan or default` renvoie nan, pas default, car NaN est "truthy" en
-    # Python. Il faut un vrai test pd.isna() pour l'attraper.
+    # pandas represents missing values as NaN (a float) — and `nan or
+    # default` returns nan, not default, because NaN is "truthy" in Python.
+    # A real pd.isna() check is needed to catch it.
     if value is None or pd.isna(value):
         return default
     return str(value)
@@ -58,12 +58,12 @@ def fetch(lookback_hours: int) -> list[RawJob]:
                 results_wanted=15,
                 hours_old=lookback_hours,
                 country_indeed="Germany",
-                # Sans ça, LinkedIn ne renvoie pas la description complète
-                # (une requête supplémentaire par offre, désactivée par défaut).
+                # Without this, LinkedIn doesn't return the full description
+                # (one extra request per job, disabled by default).
                 linkedin_fetch_description=True,
             )
         except Exception as error:
-            print(f"    [jobspy] échec sur '{term}' : {error}")
+            print(f"    [jobspy] failed on '{term}': {error}")
             continue
 
         for row in df.to_dict(orient="records"):
@@ -77,7 +77,7 @@ def fetch(lookback_hours: int) -> list[RawJob]:
                     source=row["site"],
                     external_id=str(row["id"]),
                     title=_str(row["title"]),
-                    company_name=_str(row["company"], "Entreprise inconnue"),
+                    company_name=_str(row["company"], "Unknown company"),
                     location=_str(row.get("location")),
                     remote=bool(row.get("is_remote")),
                     url=url,

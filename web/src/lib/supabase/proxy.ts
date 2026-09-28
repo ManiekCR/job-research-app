@@ -25,8 +25,8 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // IMPORTANT : ne pas retirer ce appel, même si `user` semble inutilisé.
-  // Il force Supabase à vérifier/rafraîchir le badge de session.
+  // IMPORTANT: do not remove this call, even though `user` looks unused.
+  // It forces Supabase to check/refresh the session token.
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -4,8 +4,8 @@ export type LlmProvider = "anthropic" | "openai" | "google";
 
 export type KeyTestResult = { valid: true } | { valid: false; error: string };
 
-/** Vérifie une clé API en interrogeant l'endpoint "liste des modèles" du fournisseur —
- *  aucune génération de texte, donc aucun coût. */
+/** Verifies an API key by querying the provider's "list models" endpoint —
+ *  no text generation, so no cost. */
 export async function testLlmKey(
   provider: LlmProvider,
   apiKey: string
@@ -36,7 +36,7 @@ export async function testLlmKey(
         break;
     }
   } catch {
-    return { valid: false, error: "Impossible de contacter le fournisseur (réseau)." };
+    return { valid: false, error: "Could not reach the provider (network error)." };
   }
 
   if (response.ok) {
@@ -44,8 +44,8 @@ export async function testLlmKey(
   }
 
   if (response.status === 401 || response.status === 403) {
-    return { valid: false, error: "Clé refusée par le fournisseur (invalide ou expirée)." };
+    return { valid: false, error: "Key rejected by the provider (invalid or expired)." };
   }
 
-  return { valid: false, error: `Réponse inattendue du fournisseur (code ${response.status}).` };
+  return { valid: false, error: `Unexpected response from the provider (code ${response.status}).` };
 }

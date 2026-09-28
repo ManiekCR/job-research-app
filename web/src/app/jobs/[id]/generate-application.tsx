@@ -58,7 +58,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
     return (
       <section className="mt-8">
         <h2 className="text-sm font-semibold text-black dark:text-zinc-50">
-          CV + lettre de motivation ciblés
+          Tailored CV + cover letter
         </h2>
         <button
           type="button"
@@ -66,7 +66,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
           onClick={handleGenerate}
           className="mt-2 rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
         >
-          {loading ? "Génération..." : "Générer CV + lettre"}
+          {loading ? "Generating..." : "Generate CV + letter"}
         </button>
         {error && <p className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</p>}
       </section>
@@ -77,16 +77,16 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
     <section className="mt-8">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-black dark:text-zinc-50">
-          CV + lettre de motivation ciblés
+          Tailored CV + cover letter
         </h2>
-        <span className="text-xs text-zinc-500">Langue : {data.detectedLanguage}</span>
+        <span className="text-xs text-zinc-500">Language: {data.detectedLanguage}</span>
       </div>
       <p className="mt-1 text-xs text-zinc-500">
-        Relis et corrige avant export — rien n&apos;est encore enregistré.
+        Review and edit before exporting — nothing is saved yet.
       </p>
 
       <label className="mt-4 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Accroche
+        Headline
       </label>
       <input
         value={data.headline}
@@ -95,7 +95,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
       />
 
       <label className="mt-3 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Résumé
+        Summary
       </label>
       <textarea
         value={data.summary}
@@ -104,7 +104,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
         className="mt-1 w-full rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
       />
 
-      <p className="mt-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">Expériences</p>
+      <p className="mt-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">Experience</p>
       {data.experience.map((exp, index) => (
         <div key={index} className="mt-2 rounded border border-black/10 p-2 dark:border-white/10">
           <p className="text-sm font-medium text-black dark:text-zinc-50">
@@ -120,7 +120,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
       ))}
 
       <label className="mt-4 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Lettre de motivation
+        Cover letter
       </label>
       <textarea
         value={data.coverLetter}
@@ -136,7 +136,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
           disabled={loading}
           className="rounded border border-black/10 px-3 py-1 text-sm dark:border-white/10"
         >
-          {loading ? "Régénération..." : "Régénérer"}
+          {loading ? "Regenerating..." : "Regenerate"}
         </button>
         <button
           type="button"
@@ -157,7 +157,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
           }}
           className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
         >
-          {pdfLoading === "cv" ? "Génération du PDF..." : "Télécharger le CV (PDF)"}
+          {pdfLoading === "cv" ? "Generating PDF..." : "Download CV (PDF)"}
         </button>
         <button
           type="button"
@@ -166,7 +166,7 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
             setPdfLoading("letter");
             setSaveError(null);
             const blob = await pdf(<CoverLetterDocument data={data} />).toBlob();
-            downloadBlob(blob, `lettre-${slugify(data.companyName)}.pdf`);
+            downloadBlob(blob, `cover-letter-${slugify(data.companyName)}.pdf`);
             const base64 = await blobToBase64(blob);
             const result = await saveApplicationDocument(jobId, "cover_letter", base64);
             if (result.ok) {
@@ -178,18 +178,18 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
           }}
           className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
         >
-          {pdfLoading === "letter" ? "Génération du PDF..." : "Télécharger la lettre (PDF)"}
+          {pdfLoading === "letter" ? "Generating PDF..." : "Download letter (PDF)"}
         </button>
       </div>
 
       {saveError && (
         <p className="mt-2 text-sm text-red-700 dark:text-red-300">
-          Téléchargé, mais pas sauvegardé dans le suivi des candidatures : {saveError}
+          Downloaded, but not saved to the application tracker: {saveError}
         </p>
       )}
       {savedKinds.size > 0 && (
         <p className="mt-2 text-sm text-green-700 dark:text-green-300">
-          Sauvegardé dans le suivi des candidatures ({[...savedKinds].join(", ")}).
+          Saved to the application tracker ({[...savedKinds].join(", ")}).
         </p>
       )}
     </section>

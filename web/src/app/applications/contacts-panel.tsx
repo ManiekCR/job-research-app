@@ -23,13 +23,13 @@ function asArray<T>(value: unknown): T[] {
 }
 
 const KIND_LABELS: Record<OutreachMessage["kind"], string> = {
-  connection_request: "Demande de connexion",
-  follow_up: "Relance",
-  thank_you: "Remerciement",
+  connection_request: "Connection request",
+  follow_up: "Follow-up",
+  thank_you: "Thank you",
 };
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("fr-FR");
+  return new Date(iso).toLocaleString("en-GB");
 }
 
 export function ContactsPanel({
@@ -56,7 +56,7 @@ export function ContactsPanel({
     if (!name.trim()) return;
     const trimmedLinkedinUrl = linkedinUrl.trim();
     if (trimmedLinkedinUrl && !isValidLinkedinProfileUrl(trimmedLinkedinUrl)) {
-      setError("Ce lien ne ressemble pas à un profil LinkedIn (ex. https://linkedin.com/in/...).");
+      setError("This link doesn't look like a LinkedIn profile (e.g. https://linkedin.com/in/...).");
       return;
     }
     setSaving(true);
@@ -113,7 +113,7 @@ export function ContactsPanel({
       setCopiedId(messageId);
       setTimeout(() => setCopiedId((prev) => (prev === messageId ? null : prev)), 2000);
     } catch {
-      setError("Impossible de copier automatiquement — sélectionne le texte manuellement.");
+      setError("Couldn't copy automatically — select the text manually.");
     }
   }
 
@@ -142,7 +142,7 @@ export function ContactsPanel({
   return (
     <div className="mt-1 flex flex-col gap-1 border-t border-black/10 pt-1 text-xs dark:border-white/10">
       {error && <p className="text-red-700 dark:text-red-300">{error}</p>}
-      {contacts.length === 0 && !showForm && <p className="text-zinc-500">Aucun contact.</p>}
+      {contacts.length === 0 && !showForm && <p className="text-zinc-500">No contacts.</p>}
       <ul className="flex flex-col gap-2">
         {contacts.map((contact) => {
           const isMessagesExpanded = expandedMessagesId === contact.id;
@@ -171,7 +171,7 @@ export function ContactsPanel({
                   onClick={() => handleDelete(contact.id)}
                   className="shrink-0 text-red-600 hover:underline dark:text-red-400"
                 >
-                  Supprimer
+                  Delete
                 </button>
               </div>
 
@@ -186,7 +186,7 @@ export function ContactsPanel({
                       onClick={() => handleGenerate(contact.id, kind)}
                       className="rounded border border-black/10 px-1.5 py-0.5 text-zinc-700 disabled:opacity-50 dark:border-white/10 dark:text-zinc-300"
                     >
-                      {isGenerating ? "Génération..." : `Générer : ${KIND_LABELS[kind]}`}
+                      {isGenerating ? "Generating..." : `Generate: ${KIND_LABELS[kind]}`}
                     </button>
                   );
                 })}
@@ -197,7 +197,7 @@ export function ContactsPanel({
                     className="text-blue-700 hover:underline dark:text-blue-400"
                   >
                     {isMessagesExpanded
-                      ? "Masquer les messages"
+                      ? "Hide messages"
                       : `Messages (${contact.outreach_messages.length})`}
                   </button>
                 )}
@@ -209,7 +209,7 @@ export function ContactsPanel({
                     <li key={message.id} className="rounded bg-zinc-50 p-2 dark:bg-zinc-900">
                       <p className="text-[11px] font-medium text-zinc-500">
                         {KIND_LABELS[message.kind]} — {formatDateTime(message.created_at)}
-                        {message.sent_at && " · envoyé"}
+                        {message.sent_at && " · sent"}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{message.content}</p>
                       <div className="mt-1 flex gap-2">
@@ -218,7 +218,7 @@ export function ContactsPanel({
                           onClick={() => handleCopy(message.id, message.content)}
                           className="rounded border border-black/10 px-1.5 py-0.5 dark:border-white/10"
                         >
-                          {copiedId === message.id ? "Copié !" : "Copier"}
+                          {copiedId === message.id ? "Copied!" : "Copy"}
                         </button>
                         {!message.sent_at && (
                           <button
@@ -226,7 +226,7 @@ export function ContactsPanel({
                             onClick={() => handleMarkSent(contact.id, message.id)}
                             className="rounded border border-black/10 px-1.5 py-0.5 dark:border-white/10"
                           >
-                            Marquer envoyé
+                            Mark sent
                           </button>
                         )}
                       </div>
@@ -244,13 +244,13 @@ export function ContactsPanel({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Nom"
+            placeholder="Name"
             className="rounded border border-black/10 px-1 py-0.5 dark:border-white/10 dark:bg-zinc-900"
           />
           <input
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            placeholder="Rôle (ex. recruteuse RH)"
+            placeholder="Role (e.g. HR recruiter)"
             className="rounded border border-black/10 px-1 py-0.5 dark:border-white/10 dark:bg-zinc-900"
           />
           <input
@@ -266,10 +266,10 @@ export function ContactsPanel({
               onClick={handleAdd}
               className="rounded bg-black px-2 py-1 text-white disabled:opacity-50 dark:bg-white dark:text-black"
             >
-              {saving ? "Ajout..." : "Ajouter"}
+              {saving ? "Adding..." : "Add"}
             </button>
             <button type="button" onClick={() => setShowForm(false)} className="text-zinc-500 hover:underline">
-              Annuler
+              Cancel
             </button>
           </div>
         </div>
@@ -279,7 +279,7 @@ export function ContactsPanel({
           onClick={() => setShowForm(true)}
           className="mt-1 text-left text-blue-700 hover:underline dark:text-blue-400"
         >
-          + Ajouter un contact
+          + Add a contact
         </button>
       )}
     </div>

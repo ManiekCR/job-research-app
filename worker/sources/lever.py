@@ -1,4 +1,4 @@
-"""Adaptateur Lever : API JSON publique par entreprise, pas de clé requise.
+"""Lever adapter: public per-company JSON API, no key required.
 https://github.com/lever/postings-api"""
 
 from __future__ import annotations
@@ -23,11 +23,11 @@ def fetch(lookback_hours: int) -> list[RawJob]:
             response = requests.get(API_URL.format(token=token), timeout=15)
             response.raise_for_status()
         except Exception as error:
-            print(f"    [lever] échec sur '{token}' : {error}")
+            print(f"    [lever] failed on '{token}': {error}")
             continue
 
         for item in response.json():
-            created_at = item["createdAt"] / 1000  # millisecondes -> secondes
+            created_at = item["createdAt"] / 1000  # milliseconds -> seconds
             if created_at < cutoff:
                 continue
 

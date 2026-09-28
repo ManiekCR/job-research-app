@@ -13,10 +13,10 @@ const styles = StyleSheet.create({
 
 export function CoverLetterDocument({ data }: { data: GeneratedApplication }) {
   const paragraphs = data.coverLetter.split("\n\n").filter(Boolean);
-  const today = new Date().toLocaleDateString("fr-FR");
+  const today = new Date().toLocaleDateString("en-GB");
 
   return (
-    <Document title={`Lettre de motivation — ${data.companyName}`} author={data.name}>
+    <Document title={`Cover Letter — ${data.companyName}`} author={data.name}>
       <Page size="A4" style={styles.page}>
         <View style={styles.senderBlock}>
           <Text style={styles.name}>{data.name}</Text>

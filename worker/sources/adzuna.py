@@ -1,4 +1,4 @@
-"""Adaptateur Adzuna : job board généraliste, nécessite une clé API gratuite."""
+"""Adzuna adapter: general-purpose job board, requires a free API key."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ API_URL = "https://api.adzuna.com/v1/api/jobs/de/search/{page}"
 MAX_PAGES = 3
 RESULTS_PER_PAGE = 50
 
-# `what_or` = OR logique entre mots-clés, en un seul appel (plutôt qu'une
-# recherche par mot-clé, ce que ferait le paramètre `what` seul).
+# `what_or` = logical OR between keywords, in a single call (rather than one
+# search per keyword, which is what the `what` parameter alone would do).
 SEARCH_KEYWORDS = (
     "solutions engineer,customer success,technical account manager,"
     "support engineer,product analyst,business analyst,software engineer,"
@@ -38,7 +38,7 @@ def fetch(lookback_hours: int) -> list[RawJob]:
                 "app_key": app_key,
                 "where": "Berlin",
                 "what_or": SEARCH_KEYWORDS,
-                "max_days_old": 2,  # marge de sécurité ; le vrai filtre 24h est ci-dessous
+                "max_days_old": 2,  # safety margin; the real 24h filter is below
                 "results_per_page": RESULTS_PER_PAGE,
                 "content-type": "application/json",
             },
@@ -61,7 +61,7 @@ def fetch(lookback_hours: int) -> list[RawJob]:
                     source=SOURCE_NAME,
                     external_id=item["id"],
                     title=item["title"],
-                    company_name=item.get("company", {}).get("display_name", "Entreprise inconnue"),
+                    company_name=item.get("company", {}).get("display_name", "Unknown company"),
                     location=location_name,
                     remote="remote" in location_name.lower() or "remote" in item["title"].lower(),
                     url=item["redirect_url"],
@@ -71,6 +71,6 @@ def fetch(lookback_hours: int) -> list[RawJob]:
             )
 
         if len(results) < RESULTS_PER_PAGE:
-            break  # dernière page atteinte
+            break  # last page reached
 
     return jobs

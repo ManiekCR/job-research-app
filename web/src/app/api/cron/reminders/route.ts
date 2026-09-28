@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  // Application mono-utilisateur (inscriptions désactivées) : pas besoin de
-  // filtrer par user_id, il n'existe qu'un seul compte dans toute la base.
+  // Single-user app (sign-ups disabled): no need to filter by user_id,
+  // there's only ever one account in the whole database.
   const { data: reminders, error } = await supabase
     .from("reminders")
     .select("id, remind_at, applications(id, jobs(id, title, companies(name)))")
@@ -41,16 +41,16 @@ export async function GET(request: NextRequest) {
     const application = asSingle<Application>(reminder.applications);
     const job = application ? asSingle<Job>(application.jobs) : null;
     const company = job ? asSingle<Company>(job.companies) : null;
-    return { title: job?.title ?? "Offre supprimée", company: company?.name ?? "Entreprise inconnue" };
+    return { title: job?.title ?? "Deleted job", company: company?.name ?? "Unknown company" };
   });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const linkHtml = appUrl
-    ? `<p><a href="${appUrl}/applications">Voir le suivi des candidatures →</a></p>`
+    ? `<p><a href="${appUrl}/applications">View application tracker →</a></p>`
     : "";
 
   const html = `
-    <h2>Relances du jour (${items.length})</h2>
+    <h2>Today's reminders (${items.length})</h2>
     <ul>
       ${items.map((item) => `<li><strong>${item.title}</strong> — ${item.company}</li>`).join("")}
     </ul>
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   const { error: sendError } = await resend.emails.send({
     from: "Job Search HQ <onboarding@resend.dev>",
     to: process.env.REMINDER_EMAIL_TO!,
-    subject: `${items.length} relance${items.length > 1 ? "s" : ""} à faire aujourd'hui`,
+    subject: `${items.length} reminder${items.length > 1 ? "s" : ""} due today`,
     html,
   });
 
