@@ -1,4 +1,4 @@
-"""Type commun que chaque adaptateur de source doit produire."""
+"""Common type that every source adapter must produce."""
 
 from __future__ import annotations
 
@@ -9,24 +9,24 @@ from dataclasses import dataclass
 
 @dataclass
 class RawJob:
-    source: str  # ex: "arbeitnow", "arbeitsagentur" — identifie la source
-    external_id: str  # identifiant unique CHEZ CETTE SOURCE (slug, refnr...)
+    source: str  # e.g. "arbeitnow", "arbeitsagentur" — identifies the source
+    external_id: str  # unique identifier WITHIN THIS SOURCE (slug, refnr...)
     title: str
     company_name: str
     location: str
     remote: bool
     url: str
-    created_at: int  # timestamp Unix (secondes)
+    created_at: int  # Unix timestamp (seconds)
     description: str
 
 
 def strip_html(raw: str) -> str:
-    """Certaines sources (Arbeitnow, Greenhouse) renvoient la description en
-    HTML plutôt qu'en texte brut. On la rend lisible en déséchappant les
-    entités puis en remplaçant les balises de bloc par un marquage texte léger
-    façon Markdown ("## " pour un titre, "- " pour une puce) AVANT de retirer
-    les balises restantes — la mise en forme (titres, listes) reste ainsi
-    visible pour l'affichage web, sans stocker de HTML en base."""
+    """Some sources (Arbeitnow, Greenhouse) return the description as HTML
+    rather than plain text. We make it readable by unescaping entities, then
+    replacing block-level tags with a lightweight Markdown-style marker
+    ("## " for a heading, "- " for a bullet) BEFORE stripping the remaining
+    tags — this keeps the formatting (headings, lists) visible for the web
+    display, without storing HTML in the database."""
     unescaped = html.unescape(raw or "")
     with_breaks = re.sub(r"<h[1-6][^>]*>", "\n## ", unescaped, flags=re.IGNORECASE)
     with_breaks = re.sub(r"<li[^>]*>", "\n- ", with_breaks, flags=re.IGNORECASE)

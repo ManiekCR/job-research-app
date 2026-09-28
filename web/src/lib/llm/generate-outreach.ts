@@ -7,26 +7,26 @@ import type { LlmProvider } from "./test-key";
 export type OutreachKind = "connection_request" | "follow_up" | "thank_you";
 
 const OutreachMessageSchema = z.object({
-  content: z.string().describe("Le message final, prêt à copier-coller tel quel"),
+  content: z.string().describe("The final message, ready to copy-paste as-is"),
 });
 
 const KIND_BRIEF: Record<OutreachKind, string> = {
   connection_request:
-    "Une demande de connexion LinkedIn. CONTRAINTE STRICTE : maximum 300 caractères (limite imposée par LinkedIn pour une invitation personnalisée). Va droit au but, mentionne un point commun concret (l'offre, l'entreprise, un sujet précis).",
+    "A LinkedIn connection request. STRICT CONSTRAINT: maximum 300 characters (LinkedIn's limit for a personalized invite). Get straight to the point, mention a concrete common ground (the job, the company, a specific topic).",
   follow_up:
-    "Un message de relance après une candidature envoyée, adressé à ce contact chez l'entreprise. Rappelle brièvement le poste visé, propose un échange court, reste concis (5 à 8 lignes).",
+    "A follow-up message after an application was sent, addressed to this contact at the company. Briefly recall the target role, propose a short exchange, stay concise (5 to 8 lines).",
   thank_you:
-    "Un message de remerciement après un échange ou un entretien avec ce contact. Chaleureux mais bref (4 à 6 lignes), réaffirme l'intérêt pour le poste sans en faire trop.",
+    "A thank-you message after an exchange or interview with this contact. Warm but brief (4 to 6 lines), reaffirms interest in the role without overdoing it.",
 };
 
-const SYSTEM_PROMPT = `Tu rédiges des messages de réseautage LinkedIn pour une recherche d'emploi.
+const SYSTEM_PROMPT = `You write LinkedIn networking messages for a job search.
 
-RÈGLES STRICTES :
-- N'invente aucun fait sur le candidat au-delà de ce qui t'est fourni.
-- Ton professionnel mais humain — jamais de formule toute faite ("je me permets de vous contacter", "suite à votre annonce").
-- Rédige en français, sauf si l'offre est manifestement destinée à un environnement non francophone (auquel cas rédige en anglais).
-- Respecte strictement la contrainte de longueur donnée pour le type de message demandé.
-- Ne mets aucun texte d'accompagnement, aucune balise, aucun "Objet :" — uniquement le message tel qu'il doit être copié-collé.`;
+STRICT RULES:
+- Do not invent any fact about the candidate beyond what's provided.
+- Professional but human tone — never boilerplate phrasing ("I am reaching out to you", "following your posting").
+- Write in English, unless the job posting is clearly aimed at a German-speaking context (in which case write in German).
+- Strictly respect the length constraint given for the requested message type.
+- Do not include any accompanying text, any label, any "Subject:" line — only the message as it should be copy-pasted.`;
 
 function buildPrompt(params: {
   kind: OutreachKind;
@@ -38,12 +38,12 @@ function buildPrompt(params: {
   companyName: string;
 }): string {
   return [
-    `TYPE DE MESSAGE DEMANDÉ : ${KIND_BRIEF[params.kind]}`,
+    `REQUESTED MESSAGE TYPE: ${KIND_BRIEF[params.kind]}`,
     "",
-    `CANDIDAT : ${params.candidateName} — ${params.candidateHeadline}`,
-    `CONTACT DESTINATAIRE : ${params.contactName}${params.contactRole ? ` (${params.contactRole})` : ""}`,
-    `ENTREPRISE : ${params.companyName}`,
-    `POSTE VISÉ : ${params.jobTitle}`,
+    `CANDIDATE: ${params.candidateName} — ${params.candidateHeadline}`,
+    `RECIPIENT CONTACT: ${params.contactName}${params.contactRole ? ` (${params.contactRole})` : ""}`,
+    `COMPANY: ${params.companyName}`,
+    `TARGET ROLE: ${params.jobTitle}`,
   ].join("\n");
 }
 

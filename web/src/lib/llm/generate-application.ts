@@ -5,9 +5,9 @@ import { getLanguageModel } from "./models";
 import type { LlmProvider } from "./test-key";
 
 const TailoredApplicationSchema = z.object({
-  detected_language: z.enum(["en", "de", "fr"]).describe("Langue détectée de l'annonce"),
-  headline: z.string().describe("Accroche courte adaptée à cette offre"),
-  summary: z.string().describe("Résumé adapté à cette offre, basé uniquement sur le CV maître"),
+  detected_language: z.enum(["en", "de", "fr"]).describe("Detected language of the job posting"),
+  headline: z.string().describe("Short headline tailored to this job"),
+  summary: z.string().describe("Summary tailored to this job, based only on the master CV"),
   experience_highlights: z
     .array(
       z.object({
@@ -15,20 +15,20 @@ const TailoredApplicationSchema = z.object({
         highlights: z.array(z.string()),
       })
     )
-    .describe("Points forts sélectionnés/reformulés par expérience, un élément par index du CV maître"),
-  cover_letter: z.string().describe("Lettre de motivation complète, 3-4 paragraphes"),
+    .describe("Highlights selected/reworded per experience, one entry per index of the master CV"),
+  cover_letter: z.string().describe("Full cover letter, 3-4 paragraphs"),
 });
 
 export type TailoredApplication = z.infer<typeof TailoredApplicationSchema>;
 
-const SYSTEM_PROMPT = `Tu es un rédacteur de CV senior et coach carrière. À partir d'un CV maître et d'une offre d'emploi, tu produis une accroche, un résumé, une sélection/reformulation des points forts par expérience, et une lettre de motivation — tous ciblés sur cette offre précise.
+const SYSTEM_PROMPT = `You are a senior CV writer and career coach. Given a master CV and a job posting, you produce a headline, a summary, a selection/rewording of highlights per experience, and a cover letter — all tailored to this specific job.
 
-RÈGLES STRICTES :
-- N'invente AUCUN fait : aucune compétence, aucun chiffre, aucune réalisation absente du CV maître fourni.
-- Tu peux reformuler et réordonner les points forts EXISTANTS de chaque expérience pour mettre en avant ce qui est pertinent pour cette offre. Tu ne peux pas en ajouter de nouveaux ni en inventer.
-- Pour CHAQUE expérience du CV maître (identifiée par son index), renvoie une liste de points forts sélectionnés/reformulés — toujours au moins un par expérience, tu peux en omettre certains si peu pertinents mais ne saute aucun index.
-- Détecte la langue de l'annonce ("en", "de" ou "fr") et rédige l'accroche, le résumé et la lettre dans cette langue.
-- La lettre de motivation : 3-4 paragraphes courts, professionnelle, sans formule toute faite, citant au moins un élément concret de l'offre et un élément concret du CV maître.`;
+STRICT RULES:
+- Do NOT invent ANY fact: no skill, no number, no achievement absent from the provided master CV.
+- You may reword and reorder the EXISTING highlights of each experience to bring forward what's relevant to this job. You cannot add new ones or invent them.
+- For EVERY experience in the master CV (identified by its index), return a list of selected/reworded highlights — always at least one per experience; you may omit some if irrelevant, but never skip an index.
+- Detect the language of the job posting ("en", "de", or "fr") and write the headline, summary, and letter in that language.
+- The cover letter: 3-4 short paragraphs, professional, no boilerplate phrasing, citing at least one concrete element from the job posting and one concrete element from the master CV.`;
 
 function buildPrompt(cv: Record<string, unknown>, jobTitle: string, jobDescription: string): string {
   const experience = (cv.experience as Array<Record<string, unknown>>) ?? [];
@@ -36,25 +36,25 @@ function buildPrompt(cv: Record<string, unknown>, jobTitle: string, jobDescripti
     .map((exp, i) => {
       const highlights = (exp.highlights as string[]) ?? [];
       return (
-        `[${i}] ${exp.title} — ${exp.company} (${exp.start} → ${exp.end ?? "présent"})\n` +
+        `[${i}] ${exp.title} — ${exp.company} (${exp.start} → ${exp.end ?? "present"})\n` +
         highlights.map((h) => `  - ${h}`).join("\n")
       );
     })
     .join("\n\n");
 
   return [
-    "CV MAÎTRE :",
-    `Accroche actuelle : ${cv.headline ?? ""}`,
-    `Résumé actuel : ${cv.summary ?? ""}`,
-    `Compétences clés : ${((cv.core_skills as string[]) ?? []).join(", ")}`,
-    `Compétences techniques : ${((cv.technical_skills as string[]) ?? []).join(", ")}`,
+    "MASTER CV:",
+    `Current headline: ${cv.headline ?? ""}`,
+    `Current summary: ${cv.summary ?? ""}`,
+    `Core skills: ${((cv.core_skills as string[]) ?? []).join(", ")}`,
+    `Technical skills: ${((cv.technical_skills as string[]) ?? []).join(", ")}`,
     "",
-    "EXPÉRIENCES (index entre crochets — à conserver tel quel, ne pas réordonner) :",
+    "EXPERIENCE (index in brackets — keep as-is, do not reorder):",
     experienceList,
     "",
-    "OFFRE D'EMPLOI :",
-    `Titre : ${jobTitle}`,
-    "Description :",
+    "JOB POSTING:",
+    `Title: ${jobTitle}`,
+    "Description:",
     jobDescription.slice(0, 6000),
   ].join("\n");
 }

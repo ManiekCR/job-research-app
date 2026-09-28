@@ -1,9 +1,9 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import type { GeneratedApplication } from "@/app/jobs/[id]/actions";
 
-// Une seule colonne, pas de tableaux ni d'éléments graphiques complexes —
-// c'est ce qui rend un CV lisible par un parseur ATS (Applicant Tracking
-// System), contrairement à un template à colonnes multiples.
+// Single column, no tables or complex graphical elements — this is what
+// makes a CV readable by an ATS (Applicant Tracking System) parser, unlike
+// a multi-column template.
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
   name: { fontSize: 20, fontWeight: 700, marginBottom: 2 },
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
 });
 
 function formatPeriod(start: string, end: string | null): string {
-  return `${start} — ${end ?? "présent"}`;
+  return `${start} — ${end ?? "present"}`;
 }
 
 export function CvDocument({ data }: { data: GeneratedApplication }) {
@@ -58,7 +58,7 @@ export function CvDocument({ data }: { data: GeneratedApplication }) {
 
         {data.coreSkills.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Compétences clés</Text>
+            <Text style={styles.sectionTitle}>Core Skills</Text>
             <View style={styles.tagRow}>
               {data.coreSkills.map((skill) => (
                 <Text key={skill} style={styles.tag}>
@@ -71,7 +71,7 @@ export function CvDocument({ data }: { data: GeneratedApplication }) {
 
         {data.technicalSkills.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Compétences techniques</Text>
+            <Text style={styles.sectionTitle}>Technical Skills</Text>
             <View style={styles.tagRow}>
               {data.technicalSkills.map((skill) => (
                 <Text key={skill} style={styles.tag}>
@@ -82,7 +82,7 @@ export function CvDocument({ data }: { data: GeneratedApplication }) {
           </>
         )}
 
-        <Text style={styles.sectionTitle}>Expérience</Text>
+        <Text style={styles.sectionTitle}>Experience</Text>
         {data.experience.map((exp, index) => (
           <View key={index} style={styles.experienceBlock} wrap={false}>
             <View style={styles.experienceHeader}>
@@ -102,7 +102,7 @@ export function CvDocument({ data }: { data: GeneratedApplication }) {
 
         {data.education.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Formation</Text>
+            <Text style={styles.sectionTitle}>Education</Text>
             {data.education.map((edu, index) => (
               <View key={index} style={styles.educationBlock}>
                 <Text style={styles.educationTitle}>{edu.title}</Text>
@@ -116,7 +116,7 @@ export function CvDocument({ data }: { data: GeneratedApplication }) {
 
         {data.languages.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Langues</Text>
+            <Text style={styles.sectionTitle}>Languages</Text>
             <View style={styles.tagRow}>
               {data.languages.map((lang) => (
                 <Text key={lang.name} style={styles.tag}>

@@ -1,6 +1,6 @@
 """
-Déchiffrement AES-256-GCM compatible avec web/src/lib/crypto.ts.
-Le format stocké est : base64(iv[12] + authTag[16] + ciphertext).
+AES-256-GCM decryption compatible with web/src/lib/crypto.ts.
+The stored format is: base64(iv[12] + authTag[16] + ciphertext).
 """
 
 from __future__ import annotations
@@ -21,8 +21,8 @@ def decrypt(payload_b64: str, master_key_b64: str) -> str:
     auth_tag = raw[IV_LENGTH : IV_LENGTH + AUTH_TAG_LENGTH]
     ciphertext = raw[IV_LENGTH + AUTH_TAG_LENGTH :]
 
-    # La librairie Python attend "ciphertext + tag" concaténés (contrairement
-    # à Node où ils sont manipulés séparément) — d'où ce réassemblage.
+    # The Python library expects "ciphertext + tag" concatenated (unlike
+    # Node, where they're handled separately) — hence this reassembly.
     aesgcm = AESGCM(key)
     plaintext = aesgcm.decrypt(iv, ciphertext + auth_tag, None)
     return plaintext.decode("utf-8")

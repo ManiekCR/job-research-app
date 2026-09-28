@@ -7,9 +7,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // "api/cron" est exclu : ces routes n'ont pas de session utilisateur
-    // (déclenchées par Vercel Cron) et gèrent leur propre authentification
-    // via CRON_SECRET.
+    // "api/cron" is excluded: these routes have no user session (triggered
+    // by Vercel Cron) and handle their own authentication via CRON_SECRET.
     "/((?!_next/static|_next/image|favicon.ico|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

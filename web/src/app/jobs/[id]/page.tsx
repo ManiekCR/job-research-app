@@ -20,8 +20,8 @@ function asSingle<T>(value: unknown): T {
   return value as T;
 }
 
-// Même liste de mots-clés que les compétences couvertes par les liens
-// d'apprentissage curés — pas de deuxième liste à maintenir en double.
+// Same keyword list as the skills covered by the curated learning links —
+// no second list to maintain in duplicate.
 const TECH_KEYWORDS = [
   "SQL", "Python", "JavaScript", "TypeScript", "React", "Next.js", "Rails",
   "Git", "REST", "API", "Salesforce", "Scrum", "Agile", "AWS", "Docker",
@@ -33,10 +33,10 @@ function extractTechKeywords(description: string): string[] {
   return TECH_KEYWORDS.filter((kw) => lower.includes(kw.toLowerCase()));
 }
 
-// La description est stockée en texte brut avec un léger marquage façon
-// Markdown ("## " pour un titre, "- " pour une puce — voir worker/sources/base.py
-// strip_html) plutôt qu'en HTML, pour ne rien stocker de dangereux à afficher
-// tel quel. On le reconvertit ici en éléments stylés.
+// The description is stored as plain text with lightweight Markdown-style
+// markup ("## " for a heading, "- " for a bullet — see worker/sources/base.py
+// strip_html) rather than HTML, so nothing dangerous gets stored to render
+// as-is. It's converted back into styled elements here.
 function DescriptionBlock({ text }: { text: string }) {
   const blocks = text.split("\n\n").filter(Boolean);
 
@@ -91,7 +91,7 @@ export default async function JobDetailPage({
     .maybeSingle();
 
   if (error) {
-    console.error("Erreur de chargement de l'offre :", error.message);
+    console.error("Failed to load the job:", error.message);
   }
   if (!job) notFound();
 
@@ -101,15 +101,15 @@ export default async function JobDetailPage({
   const companyLinks = company
     ? [
         {
-          label: `Chercher ${company.name} sur LinkedIn`,
+          label: `Search ${company.name} on LinkedIn`,
           url: `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(company.name)}`,
         },
         {
-          label: `Avis employés sur kununu`,
+          label: `Employee reviews on kununu`,
           url: `https://www.kununu.com/de/search?q=${encodeURIComponent(company.name)}`,
         },
         {
-          label: `Avis employés sur Glassdoor`,
+          label: `Employee reviews on Glassdoor`,
           url: `https://www.glassdoor.com/Search/results.htm?keyword=${encodeURIComponent(company.name)}`,
         },
       ]
@@ -118,18 +118,18 @@ export default async function JobDetailPage({
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <Link href="/jobs" className="text-sm text-zinc-500 hover:underline">
-        ← Retour aux offres
+        ← Back to jobs
       </Link>
 
       <h1 className="mt-2 text-xl font-semibold text-black dark:text-zinc-50">
         {job.title}
       </h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {company?.name ?? "Entreprise inconnue"}
+        {company?.name ?? "Unknown company"}
         {" · "}
         {job.is_remote ? "Remote" : job.location}
         {" · "}
-        source : {job.source}
+        source: {job.source}
       </p>
 
       <a
@@ -138,20 +138,20 @@ export default async function JobDetailPage({
         rel="noopener noreferrer"
         className="mt-3 inline-block rounded bg-black px-3 py-1 text-sm text-white dark:bg-white dark:text-black"
       >
-        Voir l&apos;offre originale
+        View original posting
       </a>
 
       {score && (
         <section className="mt-8">
           <h2 className="text-sm font-semibold text-black dark:text-zinc-50">
-            Score : {score.final_score}/100
+            Score: {score.final_score}/100
           </h2>
           <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">{score.reasoning}</p>
           <ul className="mt-3 grid grid-cols-2 gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-            <li>Hard skills : {score.hard_skills_score}/100</li>
-            <li>Soft skills : {score.soft_skills_score}/100</li>
-            <li>Expérience : {score.experience_score}/100</li>
-            <li>Langues : {score.languages_score}/100</li>
+            <li>Hard skills: {score.hard_skills_score}/100</li>
+            <li>Soft skills: {score.soft_skills_score}/100</li>
+            <li>Experience: {score.experience_score}/100</li>
+            <li>Languages: {score.languages_score}/100</li>
           </ul>
         </section>
       )}
@@ -159,10 +159,10 @@ export default async function JobDetailPage({
       {score && score.missing_skills.length > 0 && (
         <section className="mt-8">
           <h2 className="text-sm font-semibold text-black dark:text-zinc-50">
-            À apprendre pour améliorer le score
+            To learn to improve the score
           </h2>
           <p className="mt-1 text-xs text-zinc-500">
-            Classées par impact sur le score, de la plus à la moins pénalisante.
+            Ranked by impact on the score, from most to least penalizing.
           </p>
           <ul className="mt-3 flex flex-col gap-3">
             {score.missing_skills.map((skill, index) => (
@@ -186,10 +186,10 @@ export default async function JobDetailPage({
       )}
 
       <section className="mt-8">
-        <h2 className="text-sm font-semibold text-black dark:text-zinc-50">Entreprise</h2>
+        <h2 className="text-sm font-semibold text-black dark:text-zinc-50">Company</h2>
         {techKeywords.length > 0 && (
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Stack technique mentionnée : {techKeywords.join(", ")}
+            Tech stack mentioned: {techKeywords.join(", ")}
           </p>
         )}
         <ul className="mt-2 flex flex-col gap-1">
@@ -209,9 +209,9 @@ export default async function JobDetailPage({
       </section>
 
       <GenerateApplication jobId={job.id} />
-      
+
       <section className="mt-8">
-        <h2 className="text-sm font-semibold text-black dark:text-zinc-50">Description complète</h2>
+        <h2 className="text-sm font-semibold text-black dark:text-zinc-50">Full description</h2>
         <DescriptionBlock text={job.description ?? ""} />
       </section>
     </div>

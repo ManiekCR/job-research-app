@@ -10,7 +10,7 @@ const FOLLOW_UP_DELAY_DAYS = 7;
 function addDays(date: Date, days: number): string {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
-  return result.toISOString().slice(0, 10); // format "YYYY-MM-DD" attendu par une colonne `date`
+  return result.toISOString().slice(0, 10); // "YYYY-MM-DD" format expected by a `date` column
 }
 
 export async function updateApplicationStatus(
@@ -21,7 +21,7 @@ export async function updateApplicationStatus(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const { data: current, error: fetchError } = await supabase
     .from("applications")
@@ -31,7 +31,7 @@ export async function updateApplicationStatus(
     .maybeSingle();
 
   if (fetchError || !current) {
-    return { ok: false, error: fetchError?.message ?? "Candidature introuvable." };
+    return { ok: false, error: fetchError?.message ?? "Application not found." };
   }
 
   if (current.status === newStatus) {
@@ -47,10 +47,10 @@ export async function updateApplicationStatus(
     return { ok: false, error: updateError.message };
   }
 
-  // Un statut n'est journalisé qu'une seule fois : la première fois qu'on
-  // l'atteint. "Postuler" (ou tout autre statut) est une action logique, pas
-  // un curseur — un aller-retour accidentel sur le Kanban ne doit pas laisser
-  // croire qu'elle s'est produite plusieurs fois.
+  // A status is only ever logged once: the first time it's reached.
+  // "Applied" (or any other status) is a logical action, not a cursor — an
+  // accidental back-and-forth on the Kanban must not make it look like it
+  // happened multiple times.
   const { count: alreadyReached } = await supabase
     .from("application_events")
     .select("id", { count: "exact", head: true })
@@ -72,7 +72,7 @@ export async function updateApplicationStatus(
     }
   }
 
-  // Relance auto J+7 : uniquement au tout premier passage réel en "applied".
+  // Auto follow-up in 7 days: only on the very first real transition to "applied".
   if (newStatus === "applied" && isFirstTime) {
     await supabase.from("reminders").insert({
       user_id: user.id,
@@ -89,11 +89,11 @@ export async function resetApplicationHistory(applicationId: string): Promise<Up
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
-  // Sécurité : la carte a pu être re-déplacée entre l'appel côté client et
-  // l'écoulement du délai de confirmation — on ne réinitialise que si elle
-  // est toujours "à postuler" au moment où ce code s'exécute.
+  // Safety: the card may have been moved again between the client-side call
+  // and the confirmation delay elapsing — only reset if it's still
+  // "to_apply" by the time this code runs.
   const { data: current } = await supabase
     .from("applications")
     .select("status")
@@ -106,7 +106,7 @@ export async function resetApplicationHistory(applicationId: string): Promise<Up
   }
 
   await supabase.from("application_events").delete().eq("application_id", applicationId);
-  // Une relance en attente n'a plus de sens si on repart de zéro.
+  // A pending reminder no longer makes sense if we're starting over.
   await supabase.from("reminders").delete().eq("application_id", applicationId).eq("done", false);
 
   revalidatePath("/applications");
@@ -118,7 +118,7 @@ export async function markReminderDone(reminderId: string): Promise<UpdateStatus
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const { error } = await supabase
     .from("reminders")
@@ -136,7 +136,7 @@ export async function rescheduleReminder(reminderId: string, newDate: string): P
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const { error } = await supabase
     .from("reminders")

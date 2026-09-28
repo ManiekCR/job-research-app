@@ -1,14 +1,14 @@
--- pg_trgm : mesure la similarité entre deux textes (utile pour repérer un
--- même poste titré différemment sur deux sites, sans faire de comparaison
--- exacte).
+-- pg_trgm: measures similarity between two pieces of text (useful for
+-- spotting the same role titled differently on two sites, without doing an
+-- exact comparison).
 create extension if not exists pg_trgm;
 
 create index if not exists jobs_title_trgm_idx on jobs using gin (title gin_trgm_ops);
 
--- Renvoie true si une offre "grande plateforme" (LinkedIn/Indeed) similaire
--- existe déjà pour la même entreprise, dans les 30 derniers jours.
--- SECURITY INVOKER (par défaut) : la fonction s'exécute avec les droits de
--- l'appelant, donc RLS continue de s'appliquer normalement.
+-- Returns true if a similar "major platform" (LinkedIn/Indeed) listing
+-- already exists for the same company, within the last 30 days.
+-- SECURITY INVOKER (the default): the function runs with the caller's
+-- rights, so RLS keeps applying normally.
 create or replace function job_has_similar_big_platform_listing(
   p_user_id uuid,
   p_company_id uuid,

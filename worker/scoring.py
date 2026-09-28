@@ -1,10 +1,10 @@
 """
-Notation des offres via LLM : calcule un score de matching 1-100 à partir
-du CV maître (profile.cv_json) et de la description de l'offre.
+LLM-based job scoring: computes a 1-100 matching score from the master CV
+(profile.cv_json) and the job description.
 
-Important : le score FINAL est calculé ICI, en code — jamais renvoyé tel
-quel par le LLM — pour rester reproductible et indépendant des variations
-d'un modèle à l'autre.
+Important: the FINAL score is computed HERE, in code — never returned as-is
+by the LLM — to stay reproducible and independent of variations between
+models.
 """
 
 from __future__ import annotations
@@ -18,24 +18,24 @@ import litellm
 DEFAULT_WEIGHTS = {"hard_skills": 35, "experience": 25, "languages": 20, "soft_skills": 20}
 GERMAN_C1_SCORE_CAP = 40
 
-# LiteLLM identifie le fournisseur via un préfixe dans le nom du modèle.
+# LiteLLM identifies the provider via a prefix in the model name.
 PROVIDER_PREFIXES = {"anthropic": "anthropic", "openai": "openai", "google": "gemini"}
 
-SYSTEM_PROMPT = """Tu es un assistant de recrutement technique. Compare un profil candidat \
-à une offre d'emploi et renvoie UNIQUEMENT un objet JSON valide (aucun texte avant/après, \
-aucun bloc de code), avec exactement ces clés :
+SYSTEM_PROMPT = """You are a technical recruiting assistant. Compare a candidate profile \
+to a job posting and return ONLY a valid JSON object (no text before/after, \
+no code block), with exactly these keys:
 
 {
-  "hard_skills_score": <entier 0-100>,
-  "soft_skills_score": <entier 0-100>,
-  "experience_score": <entier 0-100>,
-  "languages_score": <entier 0-100>,
-  "missing_skills": ["compétence manquante la plus pénalisante pour le score", "... par ordre décroissant d'impact"],
+  "hard_skills_score": <integer 0-100>,
+  "soft_skills_score": <integer 0-100>,
+  "experience_score": <integer 0-100>,
+  "languages_score": <integer 0-100>,
+  "missing_skills": ["most score-penalizing missing skill", "... in decreasing order of impact"],
   "required_german_level": "none" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2",
-  "reasoning": "2-3 phrases expliquant les scores, en français"
+  "reasoning": "2-3 sentences explaining the scores, in English"
 }
 
-Sois rigoureux et honnête : si une compétence clé manque, baisse le score correspondant."""
+Be rigorous and honest: if a key skill is missing, lower the corresponding score."""
 
 
 @dataclass
@@ -55,25 +55,25 @@ class ScoreResult:
 
 
 def _extract_json(raw: str) -> dict:
-    """Le LLM respecte généralement la consigne 'JSON seul', mais on se protège
-    au cas où il l'entourerait d'un bloc ```json ... ``` malgré tout."""
+    """The LLM usually follows the 'JSON only' instruction, but we guard
+    against it wrapping the response in a ```json ... ``` code block anyway."""
     match = re.search(r"\{.*\}", raw, re.DOTALL)
     if not match:
-        raise ValueError(f"Aucun JSON trouvé dans la réponse du LLM : {raw!r}")
+        raise ValueError(f"No JSON found in the LLM response: {raw!r}")
     return json.loads(match.group(0))
 
 
 def _build_user_prompt(cv_json: dict, job_title: str, job_description: str) -> str:
     return (
-        f"PROFIL CANDIDAT (JSON) :\n{json.dumps(cv_json, ensure_ascii=False)}\n\n"
-        f"OFFRE D'EMPLOI :\nTitre : {job_title}\n\n"
-        f"Description :\n{job_description[:6000]}"  # tronqué pour limiter le coût
+        f"CANDIDATE PROFILE (JSON):\n{json.dumps(cv_json, ensure_ascii=False)}\n\n"
+        f"JOB POSTING:\nTitle: {job_title}\n\n"
+        f"Description:\n{job_description[:6000]}"  # truncated to limit cost
     )
 
 
 def compute_final_score(sub_scores: dict[str, int], weights: dict[str, int], required_german_level: str) -> int:
-    """Moyenne pondérée des sous-scores, avec la règle éliminatoire allemand
-    C1+. Extrait de score_job() pour être testable sans appel LLM."""
+    """Weighted average of the sub-scores, with the German C1+ elimination
+    rule. Extracted from score_job() so it's testable without an LLM call."""
     active_weights = weights if weights else DEFAULT_WEIGHTS
     total_weight = sum(active_weights.values())
     weighted = sum(sub_scores[k] * active_weights[k] for k in sub_scores) / total_weight
@@ -113,8 +113,8 @@ def score_job(
     try:
         estimated_cost_usd = litellm.completion_cost(completion_response=response, model=litellm_model)
     except Exception:
-        # Le prix de certains modèles n'est pas connu de litellm — on
-        # affiche alors les tokens seuls plutôt qu'un coût inventé.
+        # Some models' pricing is unknown to litellm — show tokens only
+        # rather than a made-up cost.
         estimated_cost_usd = None
 
     data = _extract_json(response.choices[0].message.content)

@@ -22,9 +22,9 @@ export function ScrapeButton() {
 
     const supabase = createClient();
 
-    // Le websocket Realtime a besoin qu'on lui donne explicitement le jeton
-    // de session : sans ça, il peut se connecter "anonyme", et RLS bloque
-    // alors silencieusement tous les événements (aucune erreur, juste rien).
+    // The Realtime websocket needs the session token given to it explicitly:
+    // without it, it can connect "anonymously", and RLS then silently
+    // blocks all events (no error, just nothing).
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -36,7 +36,7 @@ export function ScrapeButton() {
 
     const timeoutId = setTimeout(() => {
       setStatus("timeout");
-      setMessage("Pas de nouvelle depuis 90s — vérifie l'onglet Actions sur GitHub.");
+      setMessage("No update in 90s — check the Actions tab on GitHub.");
       supabase.removeChannel(channel);
     }, TIMEOUT_MS);
 
@@ -60,13 +60,13 @@ export function ScrapeButton() {
             if (row.status === "done") {
               clearTimeout(timeoutId);
               setStatus("done");
-              setMessage(`${row.jobs_new} nouvelle(s) offre(s) sur ${row.jobs_found} retenue(s).`);
+              setMessage(`${row.jobs_new} new job(s) out of ${row.jobs_found} kept.`);
               supabase.removeChannel(channel);
               router.refresh();
             } else if (row.status === "error") {
               clearTimeout(timeoutId);
               setStatus("error");
-              setMessage("Le scraping a échoué côté worker (vérifie les logs GitHub Actions).");
+              setMessage("Scraping failed on the worker side (check the GitHub Actions logs).");
               supabase.removeChannel(channel);
             }
           }
@@ -75,9 +75,9 @@ export function ScrapeButton() {
       .subscribe(async (subscribeStatus) => {
         if (subscribeStatus !== "SUBSCRIBED") return;
 
-        // On ne déclenche le scraping qu'UNE FOIS l'écoute confirmée active —
-        // sinon on risquerait de rater l'événement si le worker va plus vite
-        // que l'établissement de la connexion WebSocket.
+        // Only trigger the scrape ONCE the listener is confirmed active —
+        // otherwise we could miss the event if the worker runs faster than
+        // the WebSocket connection is established.
         setStatus("waiting");
         const result = await triggerScrape();
 
@@ -99,7 +99,7 @@ export function ScrapeButton() {
         disabled={isBusy}
         className="rounded bg-foreground px-3 py-2 text-sm text-background disabled:opacity-50"
       >
-        {isBusy ? "Scraping en cours…" : "Scraper"}
+        {isBusy ? "Scraping…" : "Scrape"}
       </button>
       {message && (
         <p

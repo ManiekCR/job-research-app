@@ -34,9 +34,9 @@ jobs:
 
       - run: npm ci
 
-      # tsc dépend de types générés par Next.js (LayoutProps, PageProps...)
-      # normalement produits par `next dev`/`build` — absents d'un checkout
-      # propre en CI sans cette étape.
+      # tsc relies on Next.js-generated types (LayoutProps, PageProps...)
+      # normally produced by `next dev`/`build` — missing from a clean
+      # checkout in CI without this step.
       - run: npx next typegen
 
       - run: npx tsc --noEmit

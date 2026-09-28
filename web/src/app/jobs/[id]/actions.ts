@@ -20,8 +20,8 @@ export type GeneratedApplication = {
   summary: string;
   experience: GeneratedExperience[];
   coverLetter: string;
-  // Champs d'identité recopiés tels quels depuis le CV maître (jamais
-  // passés au LLM) — nécessaires pour le rendu PDF complet.
+  // Identity fields copied as-is from the master CV (never passed to the
+  // LLM) — needed for the full PDF rendering.
   name: string;
   email: string;
   location: string;
@@ -30,7 +30,7 @@ export type GeneratedApplication = {
   coreSkills: string[];
   technicalSkills: string[];
   education: { title: string; school: string; period: string; details?: string }[];
-  // Contexte de l'offre, pour l'en-tête de la lettre de motivation.
+  // Job context, for the cover letter header.
   companyName: string;
   jobTitle: string;
 };
@@ -46,7 +46,7 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const [{ data: profile }, { data: creds }, { data: job }] = await Promise.all([
     supabase.from("profile").select("cv_json").eq("user_id", user.id).maybeSingle(),
@@ -60,13 +60,13 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
   ]);
 
   if (!profile?.cv_json || Object.keys(profile.cv_json as object).length === 0) {
-    return { ok: false, error: "Aucun CV maître enregistré — complète ton profil d'abord." };
+    return { ok: false, error: "No master CV saved — complete your profile first." };
   }
   if (!creds) {
-    return { ok: false, error: "Aucune clé LLM configurée — va dans Réglages." };
+    return { ok: false, error: "No LLM key configured — go to Settings." };
   }
   if (!job) {
-    return { ok: false, error: "Offre introuvable." };
+    return { ok: false, error: "Job not found." };
   }
 
   const apiKey = decrypt(creds.encrypted_key);
@@ -121,12 +121,12 @@ export async function generateApplication(jobId: string): Promise<GenerateResult
         coreSkills: (cv.core_skills as string[]) ?? [],
         technicalSkills: (cv.technical_skills as string[]) ?? [],
         education: (cv.education as GeneratedApplication["education"]) ?? [],
-        companyName: company?.name ?? "l'entreprise",
+        companyName: company?.name ?? "the company",
         jobTitle: job.title,
       },
     };
   } catch (error) {
-    return { ok: false, error: `Échec de la génération : ${(error as Error).message}` };
+    return { ok: false, error: `Generation failed: ${(error as Error).message}` };
   }
 }
 
@@ -141,12 +141,12 @@ export async function saveApplicationDocument(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
-  // Crée la candidature si elle n'existe pas encore (statut par défaut
-  // "à postuler"). Comme seuls user_id/job_id sont fournis, un conflit ne
-  // touche que ces deux colonnes identiques — le statut existant n'est
-  // jamais écrasé.
+  // Creates the application if it doesn't exist yet (default status
+  // "to_apply"). Since only user_id/job_id are provided, a conflict only
+  // touches those two identical columns — the existing status is never
+  // overwritten.
   const { data: application, error: upsertError } = await supabase
     .from("applications")
     .upsert({ user_id: user.id, job_id: jobId }, { onConflict: "user_id,job_id" })
@@ -154,12 +154,12 @@ export async function saveApplicationDocument(
     .single();
 
   if (upsertError || !application) {
-    return { ok: false, error: upsertError?.message ?? "Échec de création de la candidature." };
+    return { ok: false, error: upsertError?.message ?? "Failed to create the application." };
   }
 
-  // Si c'est la toute première fois qu'on touche cette candidature, on
-  // enregistre un événement "création" — sinon l'historique resterait vide
-  // tant qu'aucun glisser-déposer n'a eu lieu sur le Kanban.
+  // If this is the very first time this application is touched, record a
+  // "created" event — otherwise the history would stay empty until a drag
+  // happens on the Kanban.
   const { count: eventCount } = await supabase
     .from("application_events")
     .select("id", { count: "exact", head: true })
@@ -174,7 +174,7 @@ export async function saveApplicationDocument(
     });
   }
 
-  const filename = kind === "cv" ? "cv.pdf" : "lettre.pdf";
+  const filename = kind === "cv" ? "cv.pdf" : "cover-letter.pdf";
   const path = `${user.id}/${application.id}/${filename}`;
   const bytes = Buffer.from(base64Pdf, "base64");
 

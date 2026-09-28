@@ -23,9 +23,9 @@ export default async function SettingsPage({
   ]);
 
   const CALL_TYPE_LABELS: Record<string, string> = {
-    scoring: "Notation des offres",
-    cv_letter: "CV / lettres",
-    outreach_message: "Messages LinkedIn",
+    scoring: "Job scoring",
+    cv_letter: "CV / letters",
+    outreach_message: "LinkedIn messages",
   };
 
   const totalsByType = new Map<string, { tokens: number; cost: number }>();
@@ -50,13 +50,13 @@ export default async function SettingsPage({
   return (
     <div className="mx-auto max-w-lg px-6 py-16">
       <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-        Réglages — Clé LLM
+        Settings — LLM Key
       </h1>
 
       {credentials && (
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Configuration actuelle : <strong>{credentials.provider}</strong>,
-          clé se terminant par <code>...{credentials.key_last4}</code>
+          Current configuration: <strong>{credentials.provider}</strong>,
+          key ending in <code>...{credentials.key_last4}</code>
           {" · "}
           {credentials.fast_model} / {credentials.quality_model}
         </p>
@@ -64,22 +64,22 @@ export default async function SettingsPage({
 
       {grandTotalTokens > 0 && (
         <div className="mt-4 rounded border border-black/10 p-4 text-sm dark:border-white/10">
-          <h2 className="font-semibold text-black dark:text-zinc-50">Usage LLM (cumulé)</h2>
+          <h2 className="font-semibold text-black dark:text-zinc-50">LLM usage (cumulative)</h2>
           <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-            {grandTotalTokens.toLocaleString("fr-FR")} tokens
+            {grandTotalTokens.toLocaleString("en-GB")} tokens
             {grandTotalCost > 0 && (
               <>
                 {" "}
-                · ~{grandTotalCost.toFixed(4)} $ estimés
-                {anyCostMissing && " (partiel — certains appels sans prix connu)"}
+                · ~${grandTotalCost.toFixed(4)} estimated
+                {anyCostMissing && " (partial — some calls have no known price)"}
               </>
             )}
           </p>
           <ul className="mt-2 flex flex-col gap-0.5 text-xs text-zinc-500">
             {[...totalsByType.entries()].map(([type, totals]) => (
               <li key={type}>
-                {CALL_TYPE_LABELS[type] ?? type} : {totals.tokens.toLocaleString("fr-FR")} tokens
-                {totals.cost > 0 && ` (~${totals.cost.toFixed(4)} $)`}
+                {CALL_TYPE_LABELS[type] ?? type}: {totals.tokens.toLocaleString("en-GB")} tokens
+                {totals.cost > 0 && ` (~$${totals.cost.toFixed(4)})`}
               </li>
             ))}
           </ul>
@@ -93,13 +93,13 @@ export default async function SettingsPage({
       )}
       {success && (
         <p className="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Configuration enregistrée et vérifiée avec succès.
+          Configuration saved and verified successfully.
         </p>
       )}
 
       <form action={saveLlmCredentials} className="mt-6 flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          Fournisseur
+          Provider
           <select
             name="provider"
             defaultValue={credentials?.provider ?? "anthropic"}
@@ -112,7 +112,7 @@ export default async function SettingsPage({
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          Clé API
+          API key
           <input
             name="apiKey"
             type="password"
@@ -122,28 +122,28 @@ export default async function SettingsPage({
           />
         </label>
         <p className="text-xs text-zinc-500">
-          À recoller à chaque sauvegarde, même pour ne changer qu&apos;un nom de modèle
-          (on ne déchiffre jamais l&apos;ancienne clé pour la réafficher).
+          Re-paste it every time you save, even to just change a model name
+          (the old key is never decrypted to display it again).
         </p>
 
         <label className="flex flex-col gap-1 text-sm">
-          Modèle rapide (scoring)
+          Fast model (scoring)
           <input
             name="fastModel"
             required
             defaultValue={credentials?.fast_model}
-            placeholder="ex : claude-haiku-4-5-20251001"
+            placeholder="e.g. claude-haiku-4-5-20251001"
             className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
           />
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          Modèle qualité (CV / lettres)
+          Quality model (CV / letters)
           <input
             name="qualityModel"
             required
             defaultValue={credentials?.quality_model}
-            placeholder="ex : claude-opus-5-5"
+            placeholder="e.g. claude-opus-5-5"
             className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
           />
         </label>
@@ -152,7 +152,7 @@ export default async function SettingsPage({
           type="submit"
           className="rounded bg-foreground px-3 py-2 text-background"
         >
-          Tester et enregistrer
+          Test and save
         </button>
       </form>
     </div>

@@ -1,5 +1,5 @@
-// Autorise https://linkedin.com/in/... ou https://<sous-domaine pays>.linkedin.com/in/...
-// (ex. de.linkedin.com), avec ou sans "www.", avec ou sans "/" final.
+// Allows https://linkedin.com/in/... or https://<country subdomain>.linkedin.com/in/...
+// (e.g. de.linkedin.com), with or without "www.", with or without a trailing "/".
 const LINKEDIN_PROFILE_URL = /^https:\/\/(www\.|[a-z]{2,3}\.)?linkedin\.com\/in\/[a-zA-Z0-9\-_%]+\/?$/i;
 
 export function isValidLinkedinProfileUrl(url: string): boolean {

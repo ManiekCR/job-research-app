@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { saveProfile } from "./actions";
 
-// Pré-remplissage basé sur ton CV — à affiner/corriger directement dans le formulaire.
+// Pre-filled from your CV — refine/correct directly in the form.
 const DEFAULT_CV = {
   name: "Marian Caron",
   location: "Berlin, Germany",
@@ -139,11 +139,11 @@ export default async function ProfilePage({
   return (
     <div className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-        Profil — CV maître
+        Profile — Master CV
       </h1>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Seule source utilisée pour le scoring et la génération de CV/lettres.
-        {!hasSavedCv && " Pré-rempli à partir de ton CV — relis et corrige avant d'enregistrer."}
+        The only source used for scoring and CV/letter generation.
+        {!hasSavedCv && " Pre-filled from your CV — review and correct before saving."}
       </p>
 
       {error && (
@@ -153,7 +153,7 @@ export default async function ProfilePage({
       )}
       {success && (
         <p className="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Profil enregistré.
+          Profile saved.
         </p>
       )}
 
@@ -169,7 +169,7 @@ export default async function ProfilePage({
           type="submit"
           className="self-start rounded bg-foreground px-3 py-2 text-background"
         >
-          Enregistrer
+          Save
         </button>
       </form>
     </div>

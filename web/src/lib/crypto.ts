@@ -2,18 +2,18 @@ import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
-const IV_LENGTH = 12; // taille recommandée pour AES-GCM
+const IV_LENGTH = 12; // recommended size for AES-GCM
 const AUTH_TAG_LENGTH = 16;
 
 function getMasterKey(): Buffer {
   const secret = process.env.ENCRYPTION_MASTER_KEY;
   if (!secret) {
-    throw new Error("ENCRYPTION_MASTER_KEY est manquante dans l'environnement.");
+    throw new Error("ENCRYPTION_MASTER_KEY is missing from the environment.");
   }
   return Buffer.from(secret, "base64");
 }
 
-/** Chiffre un texte en clair, renvoie une chaîne encodée en base64 prête à stocker en base. */
+/** Encrypts plaintext, returns a base64-encoded string ready to store in the database. */
 export function encrypt(plaintext: string): string {
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv(ALGORITHM, getMasterKey(), iv);
@@ -24,13 +24,13 @@ export function encrypt(plaintext: string): string {
   ]);
   const authTag = cipher.getAuthTag();
 
-  // On concatène iv + authTag + texte chiffré : aucun des trois n'est secret
-  // individuellement, seule la clé maître l'est.
+  // Concatenates iv + authTag + ciphertext: none of the three is secret on
+  // its own, only the master key is.
   return Buffer.concat([iv, authTag, ciphertext]).toString("base64");
 }
 
-/** Déchiffre une chaîne produite par encrypt(). Lève une erreur si la clé maître ne correspond pas
- *  ou si le texte chiffré a été altéré (protection intégrée d'AES-GCM). */
+/** Decrypts a string produced by encrypt(). Throws if the master key doesn't match
+ *  or if the ciphertext has been tampered with (AES-GCM's built-in protection). */
 export function decrypt(payload: string): string {
   const raw = Buffer.from(payload, "base64");
 

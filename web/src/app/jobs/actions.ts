@@ -12,7 +12,7 @@ export async function triggerScrape(): Promise<TriggerResult> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { ok: false, error: "Non connecté." };
+    return { ok: false, error: "Not signed in." };
   }
 
   const owner = process.env.GITHUB_REPO_OWNER!;
@@ -34,7 +34,7 @@ export async function triggerScrape(): Promise<TriggerResult> {
 
   if (!response.ok) {
     const text = await response.text();
-    return { ok: false, error: `Échec du déclenchement (${response.status}): ${text}` };
+    return { ok: false, error: `Failed to trigger (${response.status}): ${text}` };
   }
 
   return { ok: true };
@@ -44,11 +44,11 @@ export type JobPreviewResult =
   | { ok: true; title: string; company: string; location: string; description: string }
   | { ok: false; error: string };
 
-// LinkedIn formate systématiquement son titre de page ainsi :
-// "{titre} at {entreprise} — {lieu} | LinkedIn Jobs". On en profite pour
-// remplir automatiquement entreprise + lieu, pas seulement le titre.
-// D'autres sites pourront avoir leur propre parseur ajouté ici plus tard,
-// sur le même principe qu'un adaptateur par source côté worker.
+// LinkedIn consistently formats its page title like this:
+// "{title} at {company} — {location} | LinkedIn Jobs". We take advantage of
+// this to auto-fill company + location, not just the title. Other sites can
+// get their own parser added here later, following the same principle as a
+// per-source adapter on the worker side.
 function parseLinkedInOgTitle(
   rawTitle: string
 ): { title: string; company: string; location: string } | null {
@@ -79,10 +79,10 @@ export async function fetchJobPreview(url: string): Promise<JobPreviewResult> {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      return { ok: false, error: "URL invalide." };
+      return { ok: false, error: "Invalid URL." };
     }
   } catch {
-    return { ok: false, error: "URL invalide." };
+    return { ok: false, error: "Invalid URL." };
   }
 
   try {
@@ -98,7 +98,7 @@ export async function fetchJobPreview(url: string): Promise<JobPreviewResult> {
     clearTimeout(timeout);
 
     if (!response.ok) {
-      return { ok: false, error: `Le site a répondu ${response.status}.` };
+      return { ok: false, error: `The site responded ${response.status}.` };
     }
 
     const html = await response.text();
@@ -115,7 +115,7 @@ export async function fetchJobPreview(url: string): Promise<JobPreviewResult> {
     return {
       ok: false,
       error:
-        "Impossible de récupérer cette page (le site bloque peut-être les requêtes automatisées). Tu peux quand même remplir les champs à la main.",
+        "Couldn't fetch this page (the site may block automated requests). You can still fill in the fields by hand.",
     };
   }
 }
@@ -141,7 +141,7 @@ async function findOrCreateCompany(
     .select("id")
     .single();
   if (error || !created) {
-    throw new Error(error?.message ?? "Échec de création de l'entreprise.");
+    throw new Error(error?.message ?? "Failed to create the company.");
   }
   return created.id;
 }
@@ -160,13 +160,13 @@ export async function importJob(input: ImportJobInput): Promise<TriggerResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const url = input.url.trim();
   const title = input.title.trim();
   const company = input.company.trim();
   if (!url || !title || !company) {
-    return { ok: false, error: "URL, titre et entreprise sont obligatoires." };
+    return { ok: false, error: "URL, title, and company are required." };
   }
 
   let companyId: string;
@@ -176,9 +176,9 @@ export async function importJob(input: ImportJobInput): Promise<TriggerResult> {
     return { ok: false, error: (error as Error).message };
   }
 
-  // Même logique que côté worker (worker/db.py `find_duplicate_job`) : une
-  // offre déjà connue pour la même entreprise + le même titre n'est pas
-  // dupliquée, on ajoute juste "manual" à ses sources.
+  // Same logic as the worker side (worker/db.py `find_duplicate_job`): a
+  // job already known for the same company + the same title isn't
+  // duplicated, we just add "manual" to its sources.
   const { data: duplicate } = await supabase
     .from("jobs")
     .select("id, sources_seen")

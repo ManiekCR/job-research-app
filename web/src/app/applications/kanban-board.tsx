@@ -5,8 +5,8 @@ import Link from "next/link";
 import { resetApplicationHistory, updateApplicationStatus } from "./actions";
 import { ContactsPanel, type RawContact } from "./contacts-panel";
 
-// Délai de confirmation avant de considérer qu'un retour à "à postuler" est
-// volontaire (et pas juste un aller-retour accidentel sur le Kanban).
+// Confirmation delay before treating a return to "to apply" as intentional
+// (and not just an accidental drag on the Kanban).
 const RESET_CONFIRM_DELAY_MS = 30_000;
 
 const STATUS_ORDER = [
@@ -22,13 +22,13 @@ const STATUS_ORDER = [
 type Status = (typeof STATUS_ORDER)[number];
 
 const STATUS_LABELS: Record<Status, string> = {
-  to_apply: "À postuler",
-  applied: "Postulé",
-  hr_interview: "Entretien RH",
-  technical_interview: "Entretien technique",
-  offer: "Offre",
-  rejected: "Refusé",
-  no_response: "Sans réponse",
+  to_apply: "To Apply",
+  applied: "Applied",
+  hr_interview: "HR Interview",
+  technical_interview: "Technical Interview",
+  offer: "Offer",
+  rejected: "Rejected",
+  no_response: "No Response",
 };
 
 type Company = { name: string } | null;
@@ -53,7 +53,7 @@ function asArray<T>(value: unknown): T[] {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR");
+  return new Date(iso).toLocaleDateString("en-GB");
 }
 
 function statusLabel(status: string): string {
@@ -84,16 +84,16 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
     const current = applications.find((app) => app.id === applicationId);
     if (!current || current.status === newStatus) return;
 
-    // Toute nouvelle destination annule une réinitialisation en attente pour
-    // cette carte (elle ne repose plus sur "à postuler" depuis 30s).
+    // Any new destination cancels a pending reset for this card (it no
+    // longer sits on "to apply" for 30s).
     const pendingReset = resetTimers.current.get(applicationId);
     if (pendingReset) {
       clearTimeout(pendingReset);
       resetTimers.current.delete(applicationId);
     }
 
-    // Même règle que côté serveur : un statut déjà atteint ne se rejournalise
-    // pas, même si la carte y retourne après un aller-retour.
+    // Same rule as the server: a status already reached isn't re-logged,
+    // even if the card returns to it after a back-and-forth.
     const existingEvents = asArray<ApplicationEvent>(current.application_events);
     const alreadyReached = existingEvents.some((event) => event.to_status === newStatus);
     const newEvent: ApplicationEvent = {
@@ -124,8 +124,8 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
       return;
     }
 
-    // Retour confirmé (30s sans autre déplacement) vers "à postuler" : on
-    // repart de zéro, l'historique de cette carte est effacé.
+    // Confirmed return (30s without another move) to "to apply": start
+    // over, this card's history is cleared.
     if (newStatus === "to_apply") {
       const timer = setTimeout(async () => {
         resetTimers.current.delete(applicationId);
@@ -174,24 +174,24 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
                         href={job ? `/jobs/${job.id}` : "#"}
                         className="font-medium text-black hover:underline dark:text-zinc-50"
                       >
-                        {job?.title ?? "Offre supprimée"}
+                        {job?.title ?? "Deleted job"}
                       </Link>
                       <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                        {company?.name ?? "Entreprise inconnue"}
+                        {company?.name ?? "Unknown company"}
                       </p>
                       <button
                         type="button"
                         onClick={() => setExpandedId(isExpanded ? null : app.id)}
                         className="mt-2 text-xs text-blue-700 hover:underline dark:text-blue-400"
                       >
-                        {isExpanded ? "Masquer l'historique" : "Historique"}
+                        {isExpanded ? "Hide history" : "History"}
                       </button>
                       {isExpanded && (
                         <ul className="mt-1 flex flex-col gap-0.5 border-t border-black/10 pt-1 text-xs text-zinc-500 dark:border-white/10">
-                          {events.length === 0 && <li>Aucun changement enregistré.</li>}
+                          {events.length === 0 && <li>No change recorded yet.</li>}
                           {events.map((event, i) => (
                             <li key={i}>
-                              {event.from_status ? statusLabel(event.from_status) : "Créée"} →{" "}
+                              {event.from_status ? statusLabel(event.from_status) : "Created"} →{" "}
                               {statusLabel(event.to_status)} ({formatDate(event.created_at)})
                             </li>
                           ))}
@@ -207,7 +207,7 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
                               onClick={() => setExpandedContactsId(isContactsExpanded ? null : app.id)}
                               className="mt-1 text-xs text-blue-700 hover:underline dark:text-blue-400"
                             >
-                              {isContactsExpanded ? "Masquer les contacts" : `Contacts (${contacts.length})`}
+                              {isContactsExpanded ? "Hide contacts" : `Contacts (${contacts.length})`}
                             </button>
                             {isContactsExpanded && (
                               <ContactsPanel applicationId={app.id} initialContacts={contacts} />
@@ -219,7 +219,7 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
                   );
                 })}
                 {columnApplications.length === 0 && (
-                  <p className="text-xs text-zinc-400 dark:text-zinc-600">Aucune</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-600">None</p>
                 )}
               </div>
             </div>

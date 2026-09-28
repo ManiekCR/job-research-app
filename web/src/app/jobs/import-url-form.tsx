@@ -30,8 +30,8 @@ export function ImportUrlForm() {
     } else {
       setError(result.error);
     }
-    // On passe à la saisie même si la récupération auto a échoué : l'utilisateur
-    // peut toujours remplir les champs à la main.
+    // Move to the details step even if the auto-fetch failed: the user can
+    // still fill in the fields by hand.
     setStep("details");
   }
 
@@ -63,7 +63,7 @@ export function ImportUrlForm() {
     return (
       <div className="mt-4 rounded border border-black/10 p-4 dark:border-white/10">
         <p className="text-sm font-medium text-black dark:text-zinc-50">
-          Importer une offre depuis une URL
+          Import a job from a URL
         </p>
         <div className="mt-2 flex gap-2">
           <input
@@ -79,7 +79,7 @@ export function ImportUrlForm() {
             onClick={handleFetchPreview}
             className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
           >
-            {loading ? "Récupération..." : "Récupérer"}
+            {loading ? "Fetching..." : "Fetch"}
           </button>
         </div>
         {error && <p className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</p>}
@@ -90,25 +90,25 @@ export function ImportUrlForm() {
   return (
     <div className="mt-4 flex flex-col gap-2 rounded border border-black/10 p-4 dark:border-white/10">
       <p className="text-sm font-medium text-black dark:text-zinc-50">
-        Vérifie et complète avant d&apos;importer
+        Check and complete before importing
       </p>
       {error && <p className="text-sm text-red-700 dark:text-red-300">{error}</p>}
       <input
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        placeholder="Titre du poste"
+        placeholder="Job title"
         className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
       />
       <input
         value={company}
         onChange={(event) => setCompany(event.target.value)}
-        placeholder="Entreprise"
+        placeholder="Company"
         className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
       />
       <input
         value={location}
         onChange={(event) => setLocation(event.target.value)}
-        placeholder="Lieu"
+        placeholder="Location"
         className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
       />
       <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
@@ -122,7 +122,7 @@ export function ImportUrlForm() {
       <textarea
         value={description}
         onChange={(event) => setDescription(event.target.value)}
-        placeholder="Description (collée automatiquement si trouvée)"
+        placeholder="Description (auto-filled if found)"
         rows={4}
         className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
       />
@@ -133,14 +133,14 @@ export function ImportUrlForm() {
           onClick={handleImport}
           className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
         >
-          {loading ? "Import..." : "Importer"}
+          {loading ? "Importing..." : "Import"}
         </button>
         <button
           type="button"
           onClick={reset}
           className="rounded border border-black/10 px-3 py-1 text-sm dark:border-white/10"
         >
-          Annuler
+          Cancel
         </button>
       </div>
     </div>

@@ -31,11 +31,11 @@ export async function addContact(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const trimmedLinkedinUrl = linkedinUrl.trim();
   if (trimmedLinkedinUrl && !isValidLinkedinProfileUrl(trimmedLinkedinUrl)) {
-    return { ok: false, error: "Ce lien ne ressemble pas à un profil LinkedIn (ex. https://linkedin.com/in/...)." };
+    return { ok: false, error: "This link doesn't look like a LinkedIn profile (e.g. https://linkedin.com/in/...)." };
   }
 
   const { data: contact, error } = await supabase
@@ -51,7 +51,7 @@ export async function addContact(
     .select("id, name, role, linkedin_url, notes, created_at")
     .single();
 
-  if (error || !contact) return { ok: false, error: error?.message ?? "Échec de la création du contact." };
+  if (error || !contact) return { ok: false, error: error?.message ?? "Failed to create the contact." };
   revalidatePath("/applications");
   return { ok: true, contact };
 }
@@ -61,7 +61,7 @@ export async function deleteContact(contactId: string): Promise<ContactActionRes
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const { error } = await supabase.from("contacts").delete().eq("id", contactId).eq("user_id", user.id);
 
@@ -89,7 +89,7 @@ export async function generateMessage(contactId: string, kind: OutreachKind): Pr
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const { data: contact } = await supabase
     .from("contacts")
@@ -98,22 +98,22 @@ export async function generateMessage(contactId: string, kind: OutreachKind): Pr
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!contact) return { ok: false, error: "Contact introuvable." };
+  if (!contact) return { ok: false, error: "Contact not found." };
 
   const [{ data: profile }, { data: creds }] = await Promise.all([
     supabase.from("profile").select("cv_json").eq("user_id", user.id).maybeSingle(),
     supabase.from("llm_credentials").select("provider, quality_model, encrypted_key").eq("user_id", user.id).maybeSingle(),
   ]);
 
-  if (!profile?.cv_json) return { ok: false, error: "Aucun CV maître enregistré — complète ton profil d'abord." };
-  if (!creds) return { ok: false, error: "Aucune clé LLM configurée — va dans Réglages." };
+  if (!profile?.cv_json) return { ok: false, error: "No master CV saved — complete your profile first." };
+  if (!creds) return { ok: false, error: "No LLM key configured — go to Settings." };
 
   const cv = profile.cv_json as Record<string, unknown>;
   const application = asSingle<{ job_id: string; jobs: unknown } | null>(contact.applications);
   const job = application ? asSingle<{ title: string; companies: unknown } | null>(application.jobs) : null;
   const company = job ? asSingle<{ name: string } | null>(job.companies) : null;
 
-  if (!job) return { ok: false, error: "Offre introuvable pour ce contact." };
+  if (!job) return { ok: false, error: "Job not found for this contact." };
 
   try {
     const { content, tokensIn, tokensOut } = await generateOutreachMessage({
@@ -126,7 +126,7 @@ export async function generateMessage(contactId: string, kind: OutreachKind): Pr
       contactName: contact.name,
       contactRole: contact.role,
       jobTitle: job.title,
-      companyName: company?.name ?? "l'entreprise",
+      companyName: company?.name ?? "the company",
     });
 
     await supabase.from("llm_usage").insert({
@@ -145,13 +145,13 @@ export async function generateMessage(contactId: string, kind: OutreachKind): Pr
       .single();
 
     if (insertError || !saved) {
-      return { ok: false, error: insertError?.message ?? "Échec de l'enregistrement." };
+      return { ok: false, error: insertError?.message ?? "Failed to save the message." };
     }
 
     revalidatePath("/applications");
     return { ok: true, message: saved };
   } catch (error) {
-    return { ok: false, error: `Échec de la génération : ${(error as Error).message}` };
+    return { ok: false, error: `Generation failed: ${(error as Error).message}` };
   }
 }
 
@@ -160,7 +160,7 @@ export async function markMessageSent(messageId: string): Promise<ContactActionR
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non connecté." };
+  if (!user) return { ok: false, error: "Not signed in." };
 
   const { error } = await supabase
     .from("outreach_messages")

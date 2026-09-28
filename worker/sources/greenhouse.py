@@ -1,4 +1,4 @@
-"""Adaptateur Greenhouse : API JSON publique par entreprise, pas de clé requise.
+"""Greenhouse adapter: public per-company JSON API, no key required.
 https://developers.greenhouse.io/job-board.html"""
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ def fetch(lookback_hours: int) -> list[RawJob]:
             response = requests.get(API_URL.format(token=token), timeout=15)
             response.raise_for_status()
         except Exception as error:
-            print(f"    [greenhouse] échec sur '{token}' : {error}")
+            print(f"    [greenhouse] failed on '{token}': {error}")
             continue
 
         for item in response.json().get("jobs", []):
