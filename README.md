@@ -34,6 +34,7 @@ Personal, single-user project (sign-ups disabled), built as a portfolio piece fo
 - **Application tracking** — Kanban with native drag-and-drop (HTML5 Drag & Drop), status-change history (each status is logged only once, not on every back-and-forth), history reset when knowingly moved back to "to apply".
 - **Follow-ups** — created automatically (7 days after moving to "Applied"), a panel of today's due reminders, a daily digest email via Vercel cron + Resend.
 - **Networking** — contacts per application, LinkedIn message generation (connection request ≤300 characters, follow-up, thank-you) — always copy-pasted by hand, no LinkedIn automation.
+- **Dashboard** — the home page (`/`): KPI tiles, top jobs not yet acted on, pipeline by status, reminders, weekly charts (jobs scraped per source, applications sent), last scrape run and LLM cost against the monthly budget. Each section streams in independently (`<Suspense>`), every tile and legend entry links to the matching filtered `/jobs` URL, and the charts are hand-rolled SVG with a validated colour palette, keyboard-accessible tooltips and a table view. A navigation bar on every page hides the link to the page you are on.
 - **LLM cost tracking** — every call (scoring, CV/letter generation, messages) logs its tokens; estimated $ cost for scoring (via `litellm.completion_cost`).
 
 ## Architecture
@@ -109,7 +110,7 @@ cd web && npm test        # Vitest
 cd worker && pytest       # pytest
 ```
 
-Not exhaustive coverage — a handful of tests targeted at the most sensitive logic: the weighted score calculation and the German C1 cap rule (`worker/tests/test_scoring.py`), HTML cleanup of descriptions (`worker/tests/test_strip_html.py`), LinkedIn URL validation (`web/src/lib/validate-linkedin-url.test.ts`). Both suites, plus `tsc --noEmit`, run automatically on every pull request (`.github/workflows/test.yml`).
+Not exhaustive coverage — a handful of tests targeted at the most sensitive logic: the weighted score calculation and the German C1 cap rule (`worker/tests/test_scoring.py`), HTML cleanup of descriptions (`worker/tests/test_strip_html.py`), LinkedIn URL validation (`web/src/lib/validate-linkedin-url.test.ts`), and the dashboard's pure helpers — Berlin-timezone week bucketing, top-N grouping, reminder classification, month-to-date cost and budget share (`web/src/lib/dashboard/aggregate.test.ts`). Both suites, plus `tsc --noEmit`, run automatically on every pull request (`.github/workflows/test.yml`).
 
 ## Cost
 
@@ -133,3 +134,5 @@ Target < €5/month: web hosting (Vercel), database (Supabase), and email (Resen
 - $ cost isn't computed for salary estimates either (tokens only), like the other web-side LLM calls.
 - Xing salaries are not stored: the figure Xing shows is its own estimate (`SalaryEstimate`), not an offered salary. Xing jobs get their salary from the LLM extraction like every other source, so most stay empty.
 - The Xing source is best-effort: it reads Xing's internal page data (`window.crate`), which can change without notice. If it breaks, that source returns nothing and the rest of the run is unaffected.
+- The dashboard cost meter under-reports: web-side LLM calls have no $ estimate, so it shows "partial", and the USD→EUR rate is a fixed, approximate constant (`USD_TO_EUR` in `web/src/lib/dashboard/aggregate.ts`).
+- Dashboard charts read at most 1,000 rows per request (Supabase's `max_rows`); if a 12-week window ever exceeds that, the chart says so and undercounts the oldest weeks.

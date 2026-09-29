@@ -5,6 +5,10 @@ import {
   classifyReminders,
   monthToDateCost,
   topNWithOther,
+  countByStatus,
+  niceTicks,
+  formatDay,
+  daysAgoIso,
 } from "./aggregate";
 
 // Tuesday 29 Sep 2026. Its Monday is 28 Sep.
@@ -135,5 +139,41 @@ describe("budgetShare", () => {
 
   it("does not clamp over-budget", () => {
     expect(budgetShare(20, 5, 0.5).share).toBe(2);
+  });
+});
+
+describe("countByStatus", () => {
+  it("counts per status, in the given order, zero-filled", () => {
+    const rows = [{ status: "applied" }, { status: "applied" }, { status: "offer" }];
+    expect(countByStatus(rows, ["to_apply", "applied", "offer"])).toEqual([
+      { label: "to_apply", count: 0 },
+      { label: "applied", count: 2 },
+      { label: "offer", count: 1 },
+    ]);
+  });
+
+  it("ignores statuses that are not in the list", () => {
+    expect(countByStatus([{ status: "weird" }], ["applied"])).toEqual([
+      { label: "applied", count: 0 },
+    ]);
+  });
+});
+
+describe("niceTicks", () => {
+  it("handles an empty chart", () => expect(niceTicks(0)).toEqual([0, 1]));
+  it("small max", () => expect(niceTicks(4)).toEqual([0, 1, 2, 3, 4]));
+  it("rounds up to a round number", () => expect(niceTicks(13)).toEqual([0, 5, 10, 15]));
+  it("30", () => expect(niceTicks(30)).toEqual([0, 10, 20, 30]));
+  it("bigger numbers", () => expect(niceTicks(101)).toEqual([0, 50, 100, 150]));
+});
+
+describe("formatDay", () => {
+  it("formats a plain date", () => expect(formatDay("2026-09-21")).toBe("21 Sep"));
+  it("drops the leading zero of the day", () => expect(formatDay("2026-01-05")).toBe("5 Jan"));
+});
+
+describe("daysAgoIso", () => {
+  it("goes back whole days", () => {
+    expect(daysAgoIso(7, new Date("2026-09-29T12:00:00Z"))).toBe("2026-09-22T12:00:00.000Z");
   });
 });

@@ -2,7 +2,7 @@ const TZ = "Europe/Berlin";
 const DAY_MS = 86_400_000;
 
 // Calendar day in Berlin as "YYYY-MM-DD" (en-CA formats this way).
-function berlinDay(d: Date): string {
+export function berlinDay(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
 }
 
@@ -121,4 +121,45 @@ export function budgetShare(
 ): { eur: number; share: number } {
   const eur = usd * rate;
   return { eur, share: eur / budgetEur };
+}
+
+// One entry per status, in the order given, zero-filled. Unknown statuses are ignored.
+export function countByStatus(
+  rows: { status: string }[],
+  statuses: readonly string[],
+): LabelledCount[] {
+  const counts = new Map(statuses.map((s) => [s, 0]));
+  for (const row of rows) {
+    if (counts.has(row.status)) counts.set(row.status, counts.get(row.status)! + 1);
+  }
+  return statuses.map((s) => ({ label: s, count: counts.get(s)! }));
+}
+
+// Axis ticks from 0 up to a round number >= max, at most `maxTicks` steps.
+// Tries steps of 1, 2, 5, 10, 20, 50, 100... and takes the first that fits.
+export function niceTicks(max: number, maxTicks = 4): number[] {
+  const target = Math.max(1, max);
+  for (let magnitude = 1; ; magnitude *= 10) {
+    for (const multiplier of [1, 2, 5]) {
+      const step = multiplier * magnitude;
+      const count = Math.ceil(target / step);
+      if (count <= maxTicks) {
+        return Array.from({ length: count + 1 }, (_, i) => i * step);
+      }
+    }
+  }
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "2026-09-21" -> "21 Sep". Plain string handling, no Intl: the month
+// abbreviations from Intl differ between Node/browser versions ("Sep" vs "Sept").
+export function formatDay(day: string): string {
+  const [, month, date] = day.split("-");
+  return `${Number(date)} ${MONTHS[Number(month) - 1]}`;
+}
+
+// ISO timestamp for `days` days before `now` (default: right now).
+export function daysAgoIso(days: number, now: Date = new Date()): string {
+  return new Date(now.getTime() - days * DAY_MS).toISOString();
 }
