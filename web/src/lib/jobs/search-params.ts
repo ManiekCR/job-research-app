@@ -7,8 +7,9 @@ export const STATUSES = [
   "technical_interview", "offer", "rejected", "no_response",
 ] as const;
 // Keep in sync with jobs.source values (worker adapters + "manual"). Add "xing" in F1.
+// Keep in sync with jobs.source values (worker adapters + "manual").
 export const SOURCES = [
-  "linkedin", "indeed", "greenhouse", "lever", "adzuna", "arbeitnow", "manual",
+  "linkedin", "indeed", "greenhouse", "lever", "adzuna", "arbeitnow", "xing", "manual",
 ] as const;
 
 export type JobsQuery = {

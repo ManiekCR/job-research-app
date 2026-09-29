@@ -195,3 +195,7 @@ describe("escapeForPostgrestOr", () => {
     expect(escapeForPostgrestOr("  hello  ")).toBe("hello");
   });
 });
+
+  it("accepts xing as a source", () => {
+    expect(parseJobsQuery({ source: "xing" }).source).toBe("xing");
+  });

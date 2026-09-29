@@ -62,11 +62,13 @@ No further steps are planned. Treat any new request as a fresh ask, not a "step 
 
 ## Known gaps / deliberately not done
 
-See the "What's not done" section of the root `README.md` for the current list (ATS company list is a ~10-company starter vs. a ~150 target, no German "Lebenslauf" CV template variant, required German level isn't persisted to the DB, no $ cost estimate for web-side LLM calls, no $ cost estimate for web-side LLM calls (CV/letter, messages, salary estimates), offered salary is empty for jobs scored before F2). Keep that section and this file in sync if either changes.
+See the "What's not done" section of the root `README.md` for the current list (ATS company list is a ~10-company starter vs. a ~150 target, no German "Lebenslauf" CV template variant, required German level isn't persisted to the DB, no $ cost estimate for web-side LLM calls, no $ cost estimate for web-side LLM calls (CV/letter, messages, salary estimates), offered salary is empty for jobs scored before F2, dashboard cost meter is "partial" for the same web-side reason). Keep that section and this file in sync if either changes.
 
 ## Key locations
 
 - `web/src/app/` — Next.js pages + Server Actions (one `actions.ts` per route segment).
+- `web/src/app/_dashboard/` — the dashboard sections at `/` (each an async Server Component in its own `<Suspense>`) and the hand-rolled SVG `column-chart.tsx`; chart colour tokens live in `globals.css` (validated with the dataviz skill's `validate_palette.js`).
+- `web/src/lib/dashboard/aggregate.ts` — pure, tested helpers behind the dashboard (Berlin-timezone week bucketing, top-N, reminders, cost/budget). `web/src/components/nav-bar.tsx` is the global nav (hides the current page's link).
 - `web/src/lib/llm/` — LLM provider dispatch (`models.ts`), generation logic + system prompts (`generate-application.ts`, `generate-outreach.ts`).
 - `worker/sources/` — one adapter module per job source (`fetch(lookback_hours) -> list[RawJob]` + `SOURCE_NAME` constant); add a source by adding one file + one line in `main.py`'s `SOURCE_MODULES` list.
 - `web/supabase/migrations/` — SQL migrations, applied via `npx supabase db push` from `web/`.
