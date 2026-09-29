@@ -19,6 +19,15 @@ const RESET_CONFIRM_DELAY_MS = 30_000;
 const OPEN_STATUSES = ["to_apply", "applied", "hr_interview", "technical_interview", "offer"] as const;
 const CLOSED_STATUSES = ["rejected", "no_response"] as const;
 
+// Phone view (design board): filter pills over vertical status groups.
+type MobileFilter = "active" | "to_apply" | "offer" | "closed";
+const MOBILE_GROUPS: Record<MobileFilter, readonly Status[]> = {
+  active: ["to_apply", "applied", "hr_interview", "technical_interview", "offer"],
+  to_apply: ["to_apply"],
+  offer: ["offer"],
+  closed: ["rejected", "no_response"],
+};
+
 type Company = { name: string } | null;
 type Job = { id: string; title: string; companies: Company } | null;
 type ApplicationEvent = { from_status: string | null; to_status: string; created_at: string };
@@ -53,6 +62,7 @@ function statusLabel(status: string): string {
 export function KanbanBoard({ initialApplications }: { initialApplications: RawApplication[] }) {
   const [applications, setApplications] = useState(initialApplications);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [mobileFilter, setMobileFilter] = useState<MobileFilter>("active");
   const [showClosed, setShowClosed] = useState<Set<Status>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -223,10 +233,56 @@ export function KanbanBoard({ initialApplications }: { initialApplications: RawA
     );
   }
 
+  const countOf = (statuses: readonly Status[]) =>
+    applications.filter((app) => (statuses as readonly string[]).includes(app.status)).length;
+  const MOBILE_PILLS: { key: MobileFilter; label: string }[] = [
+    { key: "active", label: "Active" },
+    { key: "to_apply", label: "To apply" },
+    { key: "offer", label: "Offer" },
+    { key: "closed", label: "Closed" },
+  ];
+
   return (
     <div>
       {error && <p className="alert alert-bad mb-3">{error}</p>}
-      <div className="-mx-4 overflow-x-auto px-4 pb-4 md:mx-0 md:px-0">
+
+      {/* Phone: vertical list grouped by status */}
+      <div className="flex flex-col gap-3.5 md:hidden">
+        <div role="group" aria-label="Show" className="flex gap-2 overflow-x-auto pb-1">
+          {MOBILE_PILLS.map((pill) => (
+            <button
+              key={pill.key}
+              type="button"
+              aria-pressed={mobileFilter === pill.key}
+              onClick={() => setMobileFilter(pill.key)}
+              className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm ${
+                mobileFilter === pill.key
+                  ? "border-accent bg-accent-soft font-semibold text-accent-fg"
+                  : "border-line-strong bg-surface font-medium text-text-2"
+              }`}
+            >
+              {pill.label} <span className="font-num">{countOf(MOBILE_GROUPS[pill.key])}</span>
+            </button>
+          ))}
+        </div>
+        {MOBILE_GROUPS[mobileFilter].map((status) => {
+          const group = applications.filter((app) => app.status === status);
+          return (
+            <section key={status} aria-label={STATUS_LABELS[status]} className="flex flex-col gap-2">
+              <h2 className="m-0 flex items-center gap-2 px-0.5 py-1 text-sm font-semibold leading-5 text-text-2">
+                <span className="dot" style={{ background: STATUS_COLORS[status] }} />
+                {STATUS_LABELS[status]}
+                <span className="font-num font-normal text-text-3">{group.length}</span>
+              </h2>
+              {group.map(renderCard)}
+              {group.length === 0 && <p className="caption m-0 px-0.5">Nothing here.</p>}
+            </section>
+          );
+        })}
+      </div>
+
+      {/* Desktop: kanban columns */}
+      <div className="hidden overflow-x-auto pb-4 md:block">
         <div className="grid min-w-[1180px] grid-cols-[repeat(5,minmax(0,1fr))_150px] items-stretch gap-3">
           {OPEN_STATUSES.map((status) => {
             const columnApplications = applications.filter((app) => app.status === status);
