@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { classifyReminders, formatDay } from "@/lib/dashboard/aggregate";
-import { Card } from "./card";
+import { Icon } from "@/components/icons";
+import { Card, EmptyNote } from "./card";
 
 const MAX_VISIBLE = 6;
 
@@ -43,34 +44,34 @@ export async function Reminders() {
   const hidden = rows.length - visible.length;
 
   return (
-    <Card title="Reminders" href="/applications" linkLabel="Open board">
+    <Card title="Reminders" href="/applications" linkLabel="Applications">
       {visible.length === 0 ? (
-        <p className="text-sm text-zinc-500">No reminders in the next 7 days.</p>
+        <EmptyNote>No reminders in the next 7 days.</EmptyNote>
       ) : (
-        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        <ul className="-mx-1 flex flex-col gap-0.5">
           {visible.map((r) => {
             const job = r.applications?.jobs;
             return (
               <li key={r.id}>
                 <Link
                   href="/applications"
-                  className="flex items-start gap-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  className={`row-link flex items-center gap-3 px-3 py-2.5 ${r.isOverdue ? "bg-bad-soft" : ""}`}
                 >
-                  <span
-                    className={`w-24 shrink-0 text-xs font-medium ${
-                      r.isOverdue ? "text-red-700 dark:text-red-300" : "text-zinc-600 dark:text-zinc-400"
-                    }`}
-                  >
-                    <span aria-hidden="true">{r.isOverdue ? "⚠ " : "○ "}</span>
-                    {r.isOverdue ? "Overdue" : "Due"} · {formatDay(r.remind_at)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">
-                      {job?.title ?? "Unknown job"}
-                    </span>
-                    <span className="block truncate text-xs text-zinc-500">
+                  <Icon
+                    name={r.isOverdue ? "alert" : "calendar"}
+                    className={r.isOverdue ? "text-bad" : "text-text-3"}
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-semibold">{job?.title ?? "Unknown job"}</span>
+                    <span className="truncate text-[13px] leading-[18px] text-text-2">
                       {[job?.companies?.name, r.note].filter(Boolean).join(" · ")}
                     </span>
+                  </span>
+                  <span
+                    className={`font-num whitespace-nowrap text-xs ${r.isOverdue ? "font-medium text-bad" : "text-text-3"}`}
+                  >
+                    {r.isOverdue && <span className="sr-only">Overdue, </span>}
+                    {formatDay(r.remind_at)}
                   </span>
                 </Link>
               </li>
@@ -79,7 +80,7 @@ export async function Reminders() {
         </ul>
       )}
       {(hidden > 0 || later.length > 0) && (
-        <p className="mt-2 text-xs text-zinc-500">
+        <p className="caption">
           {[hidden > 0 && `+${hidden} more`, later.length > 0 && `${later.length} later`]
             .filter(Boolean)
             .join(" · ")}

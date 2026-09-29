@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { KanbanBoard } from "./kanban-board";
 import { RemindersPanel } from "./reminders-panel";
-import Link from "next/link";
 
 export default async function ApplicationsPage() {
   const supabase = await createClient();
@@ -28,22 +27,29 @@ export default async function ApplicationsPage() {
       .order("remind_at", { ascending: true }),
   ]);
 
-  return (
-    <div className="mx-auto max-w-6xl px-6 py-16">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-          Applications ({rawApplications?.length ?? 0})
-        </h1>
-        <Link href="/jobs" className="text-sm text-zinc-500 hover:underline">
-          ← Jobs
-        </Link>
-      </div>
+  const applications = rawApplications ?? [];
+  const active = applications.filter((a) => a.status !== "rejected" && a.status !== "no_response").length;
 
-      {error && <p className="mt-4 text-sm text-red-700 dark:text-red-300">Error: {error.message}</p>}
+  return (
+    <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 md:px-10 md:pb-10 md:pt-8">
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div className="flex flex-col gap-1">
+          <h1 className="page-title">Applications</h1>
+          <span className="text-[13px] text-text-3">
+            <span className="font-num text-text-2">{active}</span> active ·{" "}
+            <span className="font-num">{applications.length}</span> in total
+          </span>
+        </div>
+        <span className="caption max-w-md">
+          Drag a card to change its status, or use the menu on the card. Every move is logged in its history.
+        </span>
+      </header>
+
+      {error && <p className="alert alert-bad">Error: {error.message}</p>}
 
       <RemindersPanel initialReminders={rawReminders ?? []} />
 
-      <KanbanBoard initialApplications={rawApplications ?? []} />
-    </div>
+      <KanbanBoard initialApplications={applications} />
+    </main>
   );
 }

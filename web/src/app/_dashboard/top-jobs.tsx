@@ -2,9 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { applyFilters, applySort } from "@/lib/jobs/apply-filters";
 import { buildJobsHref, parseJobsQuery } from "@/lib/jobs/search-params";
-import { scoreBadgeClass } from "@/lib/score-badge";
+import { ScorePill } from "@/components/score-badge";
 import { PublishedDate } from "@/components/published-date";
-import { Card } from "./card";
+import { Card, EmptyNote } from "./card";
 
 export async function TopJobs() {
   const supabase = await createClient();
@@ -33,27 +33,24 @@ export async function TopJobs() {
   return (
     <Card title="Top jobs not acted on" href={buildJobsHref(query, {})}>
       {data.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          Nothing waiting. Every scored job already has an application.
-        </p>
+        <EmptyNote>Nothing waiting. Every scored job already has an application.</EmptyNote>
       ) : (
-        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        <ul className="-mx-2 flex flex-col">
           {data.map((job) => (
             <li key={job.id}>
               <Link
                 href={`/jobs/${job.id}`}
-                className="flex items-center gap-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                className="row-link grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3.5 px-2 py-2.5"
               >
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${scoreBadgeClass(job.final_score)}`}
-                >
-                  {job.final_score}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{job.title}</span>
-                  <span className="block truncate text-xs text-zinc-500">
-                    {job.company_name ?? "Unknown company"} · <PublishedDate iso={job.posted_at} />
+                <ScorePill score={job.final_score} />
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate font-semibold">{job.title}</span>
+                  <span className="truncate text-[13px] leading-[18px] text-text-3">
+                    {job.company_name ?? "Unknown company"}
                   </span>
+                </span>
+                <span className="font-num caption">
+                  <PublishedDate iso={job.posted_at} />
                 </span>
               </Link>
             </li>

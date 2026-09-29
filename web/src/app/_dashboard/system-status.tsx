@@ -2,14 +2,15 @@ import { createClient } from "@/lib/supabase/server";
 import { budgetShare, BUDGET_EUR, daysAgoIso, monthToDateCost } from "@/lib/dashboard/aggregate";
 import { PublishedDate } from "@/components/published-date";
 import { ScrapeButton } from "@/app/jobs/scrape-button";
-import { Card } from "./card";
+import { Icon } from "@/components/icons";
+import { Card, EmptyNote } from "./card";
 
 const USAGE_WINDOW_DAYS = 35; // always covers the current month
 
-const RUN_STATUS_LABEL = {
-  running: "… Running",
-  done: "✓ Done",
-  error: "✕ Failed",
+const RUN_STATUS = {
+  running: { label: "Running", chip: "chip-accent", icon: "refresh" },
+  done: { label: "Done", chip: "chip-good", icon: "check" },
+  error: { label: "Failed", chip: "chip-bad", icon: "x" },
 } as const;
 
 export async function SystemStatus() {
@@ -40,7 +41,7 @@ export async function SystemStatus() {
   if (usageResult.error) throw new Error(usageResult.error.message);
 
   const run = runResult.data as {
-    status: keyof typeof RUN_STATUS_LABEL;
+    status: keyof typeof RUN_STATUS;
     jobs_found: number;
     jobs_new: number;
     started_at: string;
@@ -50,51 +51,54 @@ export async function SystemStatus() {
   const { eur, share } = budgetShare(usd);
   const fillPercent = Math.min(share, 1) * 100;
 
+  const runStatus = run ? RUN_STATUS[run.status] : null;
+
   return (
     <Card title="System status" href="/settings" linkLabel="Settings">
-      <div className="flex items-start justify-between gap-4">
-        <div className="text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-0.5">
           {run ? (
             <>
-              <p className="font-medium">
-                Last scrape: {RUN_STATUS_LABEL[run.status] ?? run.status}
-              </p>
-              <p className="text-xs text-zinc-500">
+              <span className="font-semibold">Last scrape</span>
+              <span className="text-[13px] text-text-3">
                 <PublishedDate iso={run.started_at} /> · {run.jobs_new} new of {run.jobs_found} kept
-              </p>
+              </span>
             </>
           ) : (
-            <p className="text-zinc-500">No scrape yet.</p>
+            <EmptyNote>No scrape yet.</EmptyNote>
           )}
         </div>
-        <ScrapeButton />
+        {runStatus && (
+          <span className={`chip ${runStatus.chip}`}>
+            <Icon name={runStatus.icon} size={12} />
+            {runStatus.label}
+          </span>
+        )}
       </div>
+      <ScrapeButton />
 
-      <div className="mt-5">
-        <p className="text-sm">
-          ~${usd.toFixed(2)} (≈ €{eur.toFixed(2)}) of €{BUDGET_EUR} this month
-        </p>
+      <div className="flex flex-col gap-2 border-t border-line pt-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="font-semibold">LLM cost this month</span>
+          <span className="font-num text-[13px]">
+            ~${usd.toFixed(2)} <span className="text-text-3">(≈ €{eur.toFixed(2)}) of €{BUDGET_EUR}</span>
+          </span>
+        </div>
         <div
           role="meter"
           aria-label="LLM cost this month"
           aria-valuemin={0}
           aria-valuemax={BUDGET_EUR}
           aria-valuenow={Math.min(eur, BUDGET_EUR)}
-          className="mt-2 h-2 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800"
+          className="flex h-2 overflow-hidden rounded-full bg-surface-3"
         >
           <div
-            className="h-full bg-zinc-700 dark:bg-zinc-300"
+            className={`h-full rounded-full ${share >= 1 ? "bg-bad" : "bg-accent"}`}
             style={{ width: `${fillPercent}%` }}
           />
         </div>
-        {share >= 1 && (
-          <p className="mt-1 text-xs font-medium text-red-700 dark:text-red-300">Over budget</p>
-        )}
-        {partial && (
-          <p className="mt-1 text-xs text-zinc-500">
-            Partial: web-side calls have no cost estimate.
-          </p>
-        )}
+        {share >= 1 && <p className="caption !text-bad font-medium">Over budget</p>}
+        {partial && <p className="caption">Partial: web-side calls have no cost estimate yet.</p>}
       </div>
     </Card>
   );

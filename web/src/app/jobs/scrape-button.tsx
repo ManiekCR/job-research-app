@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Icon } from "@/components/icons";
 import { triggerScrape } from "./actions";
 
 type Status = "idle" | "starting" | "waiting" | "running" | "done" | "error" | "timeout";
@@ -95,21 +96,20 @@ export function ScrapeButton() {
   const isBusy = status === "starting" || status === "waiting" || status === "running";
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex flex-col gap-2">
       <button
+        type="button"
         onClick={handleClick}
         disabled={isBusy}
-        className="rounded bg-foreground px-3 py-2 text-sm text-background disabled:opacity-50"
+        className="btn btn-secondary"
       >
-        {isBusy ? "Scraping…" : "Scrape"}
+        <Icon name="refresh" className={isBusy ? "animate-spin" : ""} />
+        {isBusy ? "Scraping…" : "Run scrape"}
       </button>
       {message && (
         <p
-          className={
-            status === "error" || status === "timeout"
-              ? "text-sm text-red-700 dark:text-red-300"
-              : "text-sm text-green-700 dark:text-green-300"
-          }
+          role="status"
+          className={`alert ${status === "error" || status === "timeout" ? "alert-bad" : "alert-good"}`}
         >
           {message}
         </p>

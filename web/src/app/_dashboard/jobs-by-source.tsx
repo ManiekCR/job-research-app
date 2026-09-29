@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { bucketByWeek, daysAgoIso, topNWithOther } from "@/lib/dashboard/aggregate";
 import { buildJobsHref, parseJobsQuery } from "@/lib/jobs/search-params";
-import { Card } from "./card";
+import { Card, EmptyNote } from "./card";
 import { ColumnChart, type ChartSeries } from "./column-chart";
 
 const WEEKS = 12;
@@ -73,9 +73,12 @@ export async function JobsBySource() {
   const truncated = (count ?? 0) > rows.length;
 
   return (
-    <Card title="Jobs scraped per week" href="/jobs" linkLabel="All jobs">
+    <Card
+      title="Jobs scraped per week, by source"
+      aside={<span className="caption">Last 12 weeks</span>}
+    >
       {rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">No jobs collected in the last 12 weeks.</p>
+        <EmptyNote>No jobs collected in the last 12 weeks.</EmptyNote>
       ) : (
         <>
           <ColumnChart
@@ -85,7 +88,7 @@ export async function JobsBySource() {
             series={series}
           />
           {truncated && (
-            <p className="mt-2 text-xs text-zinc-500">
+            <p className="caption">
               Showing the newest {rows.length} of {count} jobs, so the oldest weeks are undercounted.
             </p>
           )}

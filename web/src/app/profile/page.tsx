@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { saveProfile } from "./actions";
+import { ProfileEditor } from "./profile-editor";
 
 // Pre-filled from your CV — refine/correct directly in the form.
 const DEFAULT_CV = {
@@ -137,41 +138,14 @@ export default async function ProfilePage({
   const currentJson = JSON.stringify(hasSavedCv ? profile!.cv_json : DEFAULT_CV, null, 2);
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-        Profile — Master CV
-      </h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        The only source used for scoring and CV/letter generation.
-        {!hasSavedCv && " Pre-filled from your CV — review and correct before saving."}
-      </p>
-
-      {error && (
-        <p className="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Profile saved.
-        </p>
-      )}
-
-      <form action={saveProfile} className="mt-6 flex flex-col gap-4">
-        <textarea
-          name="cvJson"
-          rows={28}
-          defaultValue={currentJson}
-          spellCheck={false}
-          className="rounded border border-black/10 bg-transparent p-3 font-mono text-xs dark:border-white/10"
-        />
-        <button
-          type="submit"
-          className="self-start rounded bg-foreground px-3 py-2 text-background"
-        >
-          Save
-        </button>
-      </form>
-    </div>
+    <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-5 p-4 md:px-10 md:pb-10 md:pt-8">
+      <ProfileEditor
+        initialJson={currentJson}
+        prefilled={!hasSavedCv}
+        error={error}
+        saved={!!success}
+        action={saveProfile}
+      />
+    </main>
   );
 }

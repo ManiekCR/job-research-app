@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { bucketByWeek, daysAgoIso } from "@/lib/dashboard/aggregate";
-import { Card } from "./card";
+import { Card, EmptyNote } from "./card";
 import { ColumnChart } from "./column-chart";
 
 const WEEKS = 12;
@@ -30,9 +30,12 @@ export async function ApplicationsPerWeek() {
   const total = buckets.reduce((sum, b) => sum + b.count, 0);
 
   return (
-    <Card title="Applications per week" href="/applications" linkLabel="Open board">
+    <Card
+      title="Applications sent per week"
+      aside={<span className="caption">Last 12 weeks · <span className="font-num">{total}</span> total</span>}
+    >
       {total === 0 ? (
-        <p className="text-sm text-zinc-500">No applications sent in the last 12 weeks.</p>
+        <EmptyNote>No applications sent in the last 12 weeks.</EmptyNote>
       ) : (
         <ColumnChart
           title="Applications sent per week, last 12 weeks"
@@ -42,7 +45,7 @@ export async function ApplicationsPerWeek() {
             {
               key: "applied",
               label: "Applications",
-              color: "var(--series-1)",
+              color: "var(--accent)",
               values: buckets.map((b) => b.count),
             },
           ]}

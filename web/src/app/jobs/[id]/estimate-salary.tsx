@@ -4,6 +4,9 @@ import { useState } from "react";
 import { estimateSalaryForJob, type SalaryEstimateView } from "./actions";
 import { formatAbsoluteDate } from "@/lib/format-date";
 import { formatSalaryRange } from "@/lib/salary";
+import { Icon } from "@/components/icons";
+
+const CONFIDENCE_LEVEL = { low: 1, medium: 2, high: 3 } as const;
 
 export function EstimateSalary({
   jobId,
@@ -29,49 +32,68 @@ export function EstimateSalary({
   }
 
   return (
-    <div className="mt-4">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium text-black dark:text-zinc-50">Expected salary</h3>
-        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-200">
+    <div className="flex flex-col gap-2.5 border-t border-line pt-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="label">Expected</span>
+        <span className="chip chip-outline !border-dashed !bg-transparent !text-[11px]">
           AI estimate — not market data
         </span>
       </div>
 
       {data ? (
-        <div className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-          <p className="font-medium text-black dark:text-zinc-50">
-            {formatSalaryRange(data.minEur, data.maxEur, "EUR", "year")} (gross)
-          </p>
-          <p className="mt-1 text-xs text-zinc-500">
-            Confidence: {data.confidence} · {data.model} · {formatAbsoluteDate(data.createdAt)}
-          </p>
-          <p className="mt-2">{data.rationale}</p>
+        <>
+          <span className="font-num text-xl font-medium leading-[26px]">
+            {formatSalaryRange(data.minEur, data.maxEur, "EUR", "year")}{" "}
+            <span className="text-[13px] font-normal text-text-3">gross</span>
+          </span>
+          <div className="flex items-center gap-2 text-[13px] text-text-2">
+            <span>Confidence</span>
+            <span aria-hidden="true" className="flex gap-[3px]">
+              {[0, 1, 2].map((n) => (
+                <span
+                  key={n}
+                  className="h-1.5 w-3.5 rounded-sm"
+                  style={{
+                    background:
+                      n < CONFIDENCE_LEVEL[data.confidence] ? "var(--accent)" : "var(--surface-3)",
+                  }}
+                />
+              ))}
+            </span>
+            <span className="font-semibold capitalize text-text">{data.confidence}</span>
+          </div>
+          <p className="m-0 text-[13px] leading-[19px] text-text-2 [text-wrap:pretty]">{data.rationale}</p>
           {data.negotiationTips.length > 0 && (
-            <>
-              <p className="mt-2 font-medium text-black dark:text-zinc-50">Negotiation tips</p>
-              <ul className="mt-1 list-disc pl-5">
+            <details className="text-[13px]">
+              <summary className="cursor-pointer font-semibold">
+                Negotiation tips{" "}
+                <span className="font-num font-normal text-text-3">{data.negotiationTips.length}</span>
+              </summary>
+              <ul className="mt-2 list-disc pl-5 text-text-2">
                 {data.negotiationTips.map((tip) => (
                   <li key={tip}>{tip}</li>
                 ))}
               </ul>
-            </>
+            </details>
           )}
-        </div>
+          <span className="font-num caption">
+            {data.model} · {formatAbsoluteDate(data.createdAt)}
+          </span>
+        </>
       ) : (
-        <p className="mt-1 text-xs text-zinc-500">
-          Not generated yet. Uses one LLM call with your quality model.
-        </p>
+        <p className="caption m-0">Not generated yet. Uses one LLM call with your quality model.</p>
       )}
 
       <button
         type="button"
         disabled={loading}
         onClick={handleEstimate}
-        className="mt-3 rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className={`btn btn-sm self-start ${data ? "btn-ghost" : "btn-secondary"}`}
       >
-        {loading ? "Estimating..." : data ? "Regenerate" : "Estimate salary"}
+        <Icon name="refresh" size={14} className={loading ? "animate-spin" : ""} />
+        {loading ? "Estimating…" : data ? "Regenerate" : "Estimate salary"}
       </button>
-      {error && <p className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</p>}
+      {error && <p className="alert alert-bad">{error}</p>}
     </div>
   );
 }

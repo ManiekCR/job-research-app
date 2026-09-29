@@ -68,7 +68,8 @@ See the "What's not done" section of the root `README.md` for the current list (
 
 - `web/src/app/` — Next.js pages + Server Actions (one `actions.ts` per route segment).
 - `web/src/app/_dashboard/` — the dashboard sections at `/` (each an async Server Component in its own `<Suspense>`) and the hand-rolled SVG `column-chart.tsx`; chart colour tokens live in `globals.css` (validated with the dataviz skill's `validate_palette.js`).
-- `web/src/lib/dashboard/aggregate.ts` — pure, tested helpers behind the dashboard (Berlin-timezone week bucketing, top-N, reminders, cost/budget). `web/src/components/nav-bar.tsx` is the global nav (hides the current page's link).
+- `web/src/lib/dashboard/aggregate.ts` — pure, tested helpers behind the dashboard (Berlin-timezone week bucketing, top-N, reminders, cost/budget). `web/src/components/app-shell.tsx` is the global shell (desktop sidebar, phone top bar + tab bar; hidden on `/login`).
+- Design system: tokens (light/dark CSS variables, `bg-surface` / `text-text-2` / `border-line` Tailwind colours) and shared classes (`.card`, `.btn`, `.chip`, `.field`, `.select`, `.switch`, `.alert`…) live in `web/src/app/globals.css`, taken from the "Job Search HQ — Web Design Board" Claude artifact. Use the tokens, never raw `zinc-*` / `dark:` classes. Icons are in `web/src/components/icons.tsx`.
 - `web/src/lib/llm/` — LLM provider dispatch (`models.ts`), generation logic + system prompts (`generate-application.ts`, `generate-outreach.ts`).
 - `worker/sources/` — one adapter module per job source (`fetch(lookback_hours) -> list[RawJob]` + `SOURCE_NAME` constant); add a source by adding one file + one line in `main.py`'s `SOURCE_MODULES` list.
 - `web/supabase/migrations/` — SQL migrations, applied via `npx supabase db push` from `web/`.

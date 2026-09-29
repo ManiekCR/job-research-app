@@ -1,7 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+
   async function login(formData: FormData) {
     "use server";
 
@@ -22,35 +28,43 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-      <form
-        action={login}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-black/10 bg-white p-8 dark:border-white/10 dark:bg-zinc-950"
-      >
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-          Sign in
-        </h1>
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          required
-          className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          required
-          className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
-        />
-        <button
-          type="submit"
-          className="rounded bg-foreground px-3 py-2 text-background"
-        >
+    <main className="flex min-h-screen flex-col items-center justify-center gap-7 bg-bg p-4">
+      <form action={login} className="card flex w-full max-w-[400px] flex-col gap-[22px] !rounded-2xl p-6 shadow-pop sm:p-9">
+        <div className="flex flex-col gap-[18px]">
+          <div className="font-heading flex h-10 w-10 items-center justify-center rounded-[11px] bg-accent text-sm font-bold tracking-normal text-on-accent">
+            HQ
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <h1 className="font-heading m-0 text-2xl font-semibold leading-8 tracking-[-0.02em]">
+              Sign in to Job Search HQ
+            </h1>
+            <p className="m-0 text-sm text-text-2">Your private job search workspace.</p>
+          </div>
+        </div>
+        {error && (
+          <p role="alert" className="alert alert-bad">
+            {error}
+          </p>
+        )}
+        <label className="flex flex-col gap-1.5">
+          <span className="label">Email</span>
+          <input name="email" type="email" autoComplete="email" required className="field" />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="label">Password</span>
+          <input
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            className="field"
+          />
+        </label>
+        <button type="submit" className="btn btn-primary w-full">
           Sign in
         </button>
       </form>
-    </div>
+      <span className="caption">Single-user workspace · sign-ups are disabled</span>
+    </main>
   );
 }
