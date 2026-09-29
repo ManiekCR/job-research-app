@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Icon } from "@/components/icons";
 import { markReminderDone, rescheduleReminder } from "./actions";
 
 type Company = { name: string } | null;
@@ -67,12 +68,13 @@ export function RemindersPanel({ initialReminders }: { initialReminders: RawRemi
   if (reminders.length === 0) return null;
 
   return (
-    <section className="mt-6 rounded border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
-      <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-        Today&apos;s reminders ({reminders.length})
+    <section aria-label="Today's reminders" className="card flex flex-col gap-3 p-4">
+      <h2 className="section-title flex items-center gap-2">
+        <Icon name="bell" />
+        Today&apos;s reminders <span className="font-num font-normal text-text-3">{reminders.length}</span>
       </h2>
-      {error && <p className="mt-1 text-xs text-red-700 dark:text-red-300">{error}</p>}
-      <ul className="mt-2 flex flex-col gap-2">
+      {error && <p className="alert alert-bad">{error}</p>}
+      <ul className="flex flex-col gap-2">
         {reminders.map((reminder) => {
           const application = asSingle<Application>(reminder.applications);
           const job = application ? asSingle<Job>(application.jobs) : null;
@@ -82,35 +84,37 @@ export function RemindersPanel({ initialReminders }: { initialReminders: RawRemi
           return (
             <li
               key={reminder.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded bg-white p-2 text-sm dark:bg-zinc-950"
+              className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[10px] px-3 py-2.5 ${overdue ? "bg-bad-soft" : "bg-surface-2"}`}
             >
-              <div>
-                <Link
-                  href={job ? `/jobs/${job.id}` : "#"}
-                  className="font-medium text-black hover:underline dark:text-zinc-50"
-                >
-                  {job?.title ?? "Deleted job"}
-                </Link>
-                <span className="ml-1 text-zinc-500">— {company?.name ?? "Unknown company"}</span>
-                <span className={`ml-2 text-xs ${overdue ? "text-red-600 dark:text-red-400" : "text-zinc-500"}`}>
-                  {overdue ? "Overdue — " : ""}due {formatDate(reminder.remind_at)}
-                </span>
+              <div className="flex min-w-0 items-center gap-3">
+                <Icon name={overdue ? "alert" : "calendar"} className={overdue ? "text-bad" : "text-text-3"} />
+                <div className="flex min-w-0 flex-col">
+                  <Link
+                    href={job ? `/jobs/${job.id}` : "#"}
+                    className="truncate font-semibold !text-text hover:underline"
+                  >
+                    {job?.title ?? "Deleted job"}
+                  </Link>
+                  <span className="text-[13px] leading-[18px] text-text-2">
+                    {company?.name ?? "Unknown company"} ·{" "}
+                    <span className={`font-num ${overdue ? "font-medium text-bad" : ""}`}>
+                      {overdue ? "overdue, " : ""}due {formatDate(reminder.remind_at)}
+                    </span>
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 text-xs text-text-2">
                   Reschedule to
                   <input
                     type="date"
                     min={todayIso()}
-                    className="rounded border border-black/10 px-1 py-0.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                    className="field font-num !h-[30px] !w-36 !text-xs"
                     onChange={(e) => handleReschedule(reminder.id, e.target.value)}
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => handleDone(reminder.id)}
-                  className="rounded bg-black px-2 py-1 text-xs text-white dark:bg-white dark:text-black"
-                >
+                <button type="button" onClick={() => handleDone(reminder.id)} className="btn btn-secondary btn-sm">
+                  <Icon name="check" size={14} />
                   Mark done
                 </button>
               </div>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { Icon } from "@/components/icons";
 import { saveLlmCredentials } from "./actions";
 
 export default async function SettingsPage({
@@ -48,114 +49,160 @@ export default async function SettingsPage({
     totalsByType.set(row.call_type, current);
   }
 
+  const PROVIDERS = [
+    { value: "anthropic", label: "Anthropic" },
+    { value: "openai", label: "OpenAI" },
+    { value: "google", label: "Google" },
+  ];
+  const currentProvider = credentials?.provider ?? "anthropic";
+
   return (
-    <div className="mx-auto max-w-lg px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-        Settings — LLM Key
-      </h1>
+    <main className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 p-4 md:px-10 md:pb-10 md:pt-8">
+      <header className="flex flex-col gap-1">
+        <h1 className="page-title">Settings</h1>
+        <span className="text-[13px] text-text-3">
+          Bring your own LLM key. It is the only variable cost in the app.
+        </span>
+      </header>
 
-      {credentials && (
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Current configuration: <strong>{credentials.provider}</strong>,
-          key ending in <code>...{credentials.key_last4}</code>
-          {" · "}
-          {credentials.fast_model} / {credentials.quality_model}
-        </p>
-      )}
+      {error && <p className="alert alert-bad">{error}</p>}
+      {success && <p className="alert alert-good">Configuration saved and verified successfully.</p>}
 
-      {grandTotalTokens > 0 && (
-        <div className="mt-4 rounded border border-black/10 p-4 text-sm dark:border-white/10">
-          <h2 className="font-semibold text-black dark:text-zinc-50">LLM usage (cumulative)</h2>
-          <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-            {grandTotalTokens.toLocaleString("en-GB")} tokens
-            {grandTotalCost > 0 && (
-              <>
-                {" "}
-                · ~${grandTotalCost.toFixed(4)} estimated
-                {anyCostMissing && " (partial — some calls have no known price)"}
-              </>
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <form action={saveLlmCredentials} className="card flex flex-col gap-[22px] p-5 md:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <h2 className="section-title !text-lg">LLM provider</h2>
+              {credentials && (
+                <span className="text-[13px] text-text-3">
+                  Current: <span className="font-semibold capitalize text-text-2">{credentials.provider}</span>, key
+                  ending in <span className="font-num text-text-2">…{credentials.key_last4}</span>
+                </span>
+              )}
+            </div>
+            {credentials && (
+              <span className="chip chip-good">
+                <Icon name="check" size={12} />
+                Saved
+              </span>
             )}
-          </p>
-          <ul className="mt-2 flex flex-col gap-0.5 text-xs text-zinc-500">
-            {[...totalsByType.entries()].map(([type, totals]) => (
-              <li key={type}>
-                {CALL_TYPE_LABELS[type] ?? type}: {totals.tokens.toLocaleString("en-GB")} tokens
-                {totals.cost > 0 && ` (~$${totals.cost.toFixed(4)})`}
-              </li>
+          </div>
+
+          <fieldset className="m-0 grid grid-cols-1 gap-2.5 border-0 p-0 sm:grid-cols-3">
+            <legend className="label mb-2 p-0">Provider</legend>
+            {PROVIDERS.map((provider) => (
+              <label
+                key={provider.value}
+                className="relative flex cursor-pointer items-center justify-between rounded-[10px] border border-line-strong bg-surface p-3.5 has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:shadow-[0_0_0_1px_var(--accent)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+              >
+                <input
+                  type="radio"
+                  name="provider"
+                  value={provider.value}
+                  defaultChecked={currentProvider === provider.value}
+                  className="peer absolute opacity-0"
+                />
+                <span className="font-semibold">{provider.label}</span>
+                <span className="box-border h-4 w-4 rounded-full border-[1.5px] border-line-strong peer-checked:border-[5px] peer-checked:border-accent" />
+              </label>
             ))}
-          </ul>
+          </fieldset>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="label">API key</span>
+            <span className="relative flex">
+              <Icon name="key" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3" />
+              <input
+                name="apiKey"
+                type="password"
+                required
+                placeholder="sk-..."
+                autoComplete="off"
+                className="field font-num !pl-9"
+              />
+            </span>
+            <span className="caption">
+              Encrypted with AES-256-GCM and never sent back to the browser, so re-paste it every time you save,
+              even to change a model name.
+            </span>
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="label">Fast model · scoring</span>
+              <input
+                name="fastModel"
+                required
+                defaultValue={credentials?.fast_model}
+                placeholder="e.g. claude-haiku-4-5-20251001"
+                className="field font-num !text-[13px]"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="label">Quality model · CV, letters, messages</span>
+              <input
+                name="qualityModel"
+                required
+                defaultValue={credentials?.quality_model}
+                placeholder="e.g. claude-opus-5-5"
+                className="field font-num !text-[13px]"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-line pt-[18px]">
+            <button type="submit" className="btn btn-primary">
+              Test and save
+            </button>
+            <span className="caption">The key is checked with the provider before it is stored.</span>
+          </div>
+        </form>
+
+        <div className="flex flex-col gap-5">
+          <section className="card flex flex-col gap-3.5 p-5 md:p-6">
+            <h2 className="section-title !text-lg">Usage</h2>
+            {grandTotalTokens > 0 ? (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-heading text-[32px] font-semibold leading-9 tabular-nums">
+                    {grandTotalTokens.toLocaleString("en-GB")}
+                  </span>
+                  <span className="text-[13px] text-text-3">
+                    tokens{grandTotalCost > 0 && <> · <span className="font-num">~${grandTotalCost.toFixed(4)}</span></>}
+                  </span>
+                </div>
+                {anyCostMissing && (
+                  <span className="caption">
+                    Partial: some calls (web-side) have no cost estimate yet, so they show “—”.
+                  </span>
+                )}
+                <div className="flex flex-col text-[13px]">
+                  <div className="grid grid-cols-[minmax(0,1fr)_110px_90px] border-b border-line py-2 text-text-3">
+                    <span>Call type</span>
+                    <span className="text-right">Tokens</span>
+                    <span className="text-right">Cost</span>
+                  </div>
+                  {[...totalsByType.entries()].map(([type, totals]) => (
+                    <div
+                      key={type}
+                      className="grid grid-cols-[minmax(0,1fr)_110px_90px] border-b border-line py-2.5 last:border-b-0"
+                    >
+                      <span>{CALL_TYPE_LABELS[type] ?? type}</span>
+                      <span className="font-num text-right">{totals.tokens.toLocaleString("en-GB")}</span>
+                      <span className={`font-num text-right ${totals.cost > 0 ? "" : "text-text-3"}`}>
+                        {totals.cost > 0 ? `~$${totals.cost.toFixed(4)}` : "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <span className="caption">Cumulative, all time.</span>
+              </>
+            ) : (
+              <p className="m-0 text-sm text-text-3">No LLM calls yet.</p>
+            )}
+          </section>
         </div>
-      )}
-
-      {error && (
-        <p className="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Configuration saved and verified successfully.
-        </p>
-      )}
-
-      <form action={saveLlmCredentials} className="mt-6 flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Provider
-          <select
-            name="provider"
-            defaultValue={credentials?.provider ?? "anthropic"}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
-          >
-            <option value="anthropic">Anthropic</option>
-            <option value="openai">OpenAI</option>
-            <option value="google">Google</option>
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          API key
-          <input
-            name="apiKey"
-            type="password"
-            required
-            placeholder="sk-..."
-            className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
-          />
-        </label>
-        <p className="text-xs text-zinc-500">
-          Re-paste it every time you save, even to just change a model name
-          (the old key is never decrypted to display it again).
-        </p>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Fast model (scoring)
-          <input
-            name="fastModel"
-            required
-            defaultValue={credentials?.fast_model}
-            placeholder="e.g. claude-haiku-4-5-20251001"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Quality model (CV / letters)
-          <input
-            name="qualityModel"
-            required
-            defaultValue={credentials?.quality_model}
-            placeholder="e.g. claude-opus-5-5"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/10"
-          />
-        </label>
-
-        <button
-          type="submit"
-          className="rounded bg-foreground px-3 py-2 text-background"
-        >
-          Test and save
-        </button>
-      </form>
-    </div>
+      </div>
+    </main>
   );
 }

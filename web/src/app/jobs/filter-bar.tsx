@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/icons";
 import {
   DAYS,
   MIN_SCORES,
@@ -8,8 +9,29 @@ import {
   buildJobsHref
 } from "@/lib/jobs/search-params";
 
-const inputClass =
-  "rounded border border-black/10 bg-transparent px-2 py-1 text-sm dark:border-white/10";
+// A <select> with the design's chevron. `on` highlights it when a filter is set.
+function Select({
+  name,
+  label,
+  defaultValue,
+  on,
+  children,
+}: {
+  name: string;
+  label: string;
+  defaultValue: string | number;
+  on: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className={`select ${on ? "select-on" : ""}`}>
+      <select name={name} defaultValue={defaultValue} aria-label={label} className="field !h-8 !text-[13px]">
+        {children}
+      </select>
+      <Icon name="chevronDown" />
+    </span>
+  );
+}
 
 export function FilterBar({ query }: { query: JobsQuery }) {
   // How many filters are active (sort is a preference, not a filter).
@@ -25,90 +47,94 @@ export function FilterBar({ query }: { query: JobsQuery }) {
   ].filter(Boolean).length;
 
   return (
-    <form
-      method="get"
-      action="/jobs"
-      className="mt-6 flex flex-col gap-3 rounded border border-black/10 p-4 dark:border-white/10"
-    >
+    <form method="get" action="/jobs" role="search" className="card flex flex-col gap-3 p-3.5">
       <input type="hidden" name="pageSize" value={query.pageSize} />
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="search"
-          name="q"
-          defaultValue={query.q}
-          placeholder="Title or company"
-          aria-label="Search title or company"
-          className={`${inputClass} min-w-48 flex-1`}
-        />
-        <input
-          type="text"
-          name="loc"
-          defaultValue={query.loc}
-          placeholder="Location"
-          aria-label="Location"
-          className={`${inputClass} w-40`}
-        />
+      <div className="flex flex-wrap gap-2.5">
+        <div className="relative flex min-w-48 flex-1">
+          <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={query.q}
+            placeholder="Search title or company"
+            aria-label="Search title or company"
+            className="field !pl-9"
+          />
+        </div>
+        <div className="relative flex w-full sm:w-56">
+          <Icon name="pin" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3" />
+          <input
+            type="text"
+            name="loc"
+            defaultValue={query.loc}
+            placeholder="Location"
+            aria-label="Location"
+            className="field !pl-9"
+          />
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <select name="minScore" defaultValue={query.minScore ?? ""} aria-label="Minimum score" className={inputClass}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select name="minScore" label="Minimum score" defaultValue={query.minScore ?? ""} on={query.minScore !== null}>
           <option value="">Any score</option>
           {MIN_SCORES.map((s) => (
             <option key={s} value={s}>{s}+</option>
           ))}
-        </select>
+        </Select>
 
-        <select name="source" defaultValue={query.source ?? ""} aria-label="Source" className={inputClass}>
+        <Select name="source" label="Source" defaultValue={query.source ?? ""} on={query.source !== null}>
           <option value="">Any source</option>
           {SOURCES.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
-        </select>
+        </Select>
 
-        <select name="status" defaultValue={query.status ?? ""} aria-label="Application status" className={inputClass}>
+        <Select name="status" label="Application status" defaultValue={query.status ?? ""} on={query.status !== null}>
           <option value="">Any status</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
               {s === "none" ? "Not in pipeline" : s.replaceAll("_", " ")}
             </option>
           ))}
-        </select>
+        </Select>
 
-        <select name="days" defaultValue={query.days ?? ""} aria-label="Published within" className={inputClass}>
+        <Select name="days" label="Published within" defaultValue={query.days ?? ""} on={query.days !== null}>
           <option value="">Any date</option>
           {DAYS.map((d) => (
             <option key={d} value={d}>
               Last {d === 1 ? "24 hours" : `${d} days`}
             </option>
           ))}
-        </select>
+        </Select>
 
-        <select name="sort" defaultValue={query.sort} aria-label="Sort by" className={inputClass}>
-          <option value="score">Sort: best score</option>
+        <Select name="sort" label="Sort by" defaultValue={query.sort} on={false}>
+          <option value="score">Sort: best match</option>
           <option value="recent">Sort: most recent</option>
-        </select>
-      </div>
+        </Select>
 
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <label className="flex items-center gap-1.5">
+        <span aria-hidden="true" className="mx-1.5 hidden h-5 w-px bg-line md:block" />
+
+        <label className="switch">
           <input type="checkbox" name="remote" value="1" defaultChecked={query.remote} />
+          <span className="track" />
           Remote only
         </label>
-        <label className="flex items-center gap-1.5">
+        <label className="switch md:ml-2">
           <input type="checkbox" name="hidden" value="1" defaultChecked={query.hidden} />
-          Hidden jobs only
+          <span className="track" />
+          Hidden only
         </label>
 
         <div className="ml-auto flex items-center gap-3">
           {activeCount > 0 && (
-            <Link href={buildJobsHref(query, { q: "", minScore: null, source: null, status: null, loc: "", remote: false, days: null, hidden: false })} className="text-blue-700 hover:underline dark:text-blue-400">
+            <Link
+              href={buildJobsHref(query, { q: "", minScore: null, source: null, status: null, loc: "", remote: false, days: null, hidden: false })}
+              className="text-[13px] font-medium"
+            >
               Clear filters ({activeCount})
             </Link>
           )}
-          <button
-            type="submit"
-            className="rounded bg-black px-3 py-1 text-sm font-medium text-white dark:bg-zinc-50 dark:text-black"
-          >
+          <button type="submit" className="btn btn-primary btn-sm">
             Apply
           </button>
         </div>

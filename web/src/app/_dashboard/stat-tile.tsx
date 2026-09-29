@@ -1,24 +1,36 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { Icon } from "@/components/icons";
 
 export function StatTile({
   label,
   value,
   href,
   hint,
+  emphasis = false,
+  hintTone = "muted",
 }: {
   label: string;
   value: number;
   href: string;
-  hint?: string;
+  hint?: ReactNode;
+  emphasis?: boolean; // paints the number in the accent colour
+  hintTone?: "muted" | "bad";
 }) {
   return (
-    <Link
-      href={href}
-      className="block rounded-lg border border-zinc-200 p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-    >
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
-      {hint && <p className="mt-1 text-xs text-zinc-500">{hint}</p>}
+    <Link href={href} className="card card-link flex flex-col gap-1.5 px-4 py-3.5 md:px-5 md:py-[18px]">
+      <span className="flex items-center justify-between text-[13px] text-text-2">
+        {label}
+        <Icon name="arrowUpRight" size={14} className="hidden text-text-3 md:block" />
+      </span>
+      <span
+        className={`font-heading text-[30px] font-semibold leading-9 tabular-nums md:text-[32px] ${emphasis ? "text-accent-fg" : ""}`}
+      >
+        {value}
+      </span>
+      {hint && (
+        <span className={`caption ${hintTone === "bad" ? "!text-bad" : ""}`}>{hint}</span>
+      )}
     </Link>
   );
 }

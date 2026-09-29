@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { addContact, deleteContact, generateMessage, markMessageSent, type GeneratedMessage } from "./contacts-actions";
+import { Icon } from "@/components/icons";
 import { isValidLinkedinProfileUrl } from "@/lib/validate-linkedin-url";
 
 export type OutreachMessage = GeneratedMessage;
@@ -140,98 +141,106 @@ export function ContactsPanel({
   }
 
   return (
-    <div className="mt-1 flex flex-col gap-1 border-t border-black/10 pt-1 text-xs dark:border-white/10">
-      {error && <p className="text-red-700 dark:text-red-300">{error}</p>}
-      {contacts.length === 0 && !showForm && <p className="text-zinc-500">No contacts.</p>}
-      <ul className="flex flex-col gap-2">
+    <div className="mt-2 flex flex-col gap-2.5 border-t border-line pt-2.5 text-[13px]">
+      {error && <p className="alert alert-bad !py-2">{error}</p>}
+      {contacts.length === 0 && !showForm && <p className="caption m-0">No contacts yet.</p>}
+      <ul className="flex flex-col gap-3">
         {contacts.map((contact) => {
           const isMessagesExpanded = expandedMessagesId === contact.id;
           return (
-            <li key={contact.id} className="text-zinc-600 dark:text-zinc-400">
+            <li key={contact.id} className="flex flex-col gap-2 text-text-2">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <span className="font-medium text-black dark:text-zinc-50">{contact.name}</span>
-                  {contact.role && <span> — {contact.role}</span>}
+                <div className="min-w-0">
+                  <span className="font-semibold text-text">{contact.name}</span>
+                  {contact.role && <span className="block text-text-3">{contact.role}</span>}
                   {contact.linkedin_url && (
-                    <>
-                      {" · "}
-                      <a
-                        href={contact.linkedin_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-700 hover:underline dark:text-blue-400"
-                      >
-                        LinkedIn
-                      </a>
-                    </>
+                    <a
+                      href={contact.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium"
+                    >
+                      LinkedIn
+                      <Icon name="arrowUpRight" size={12} />
+                    </a>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => handleDelete(contact.id)}
-                  className="shrink-0 text-red-600 hover:underline dark:text-red-400"
+                  className="btn btn-danger btn-sm !h-7"
                 >
                   Delete
                 </button>
               </div>
 
-              <div className="mt-1 flex flex-wrap gap-2">
-                {(Object.keys(KIND_LABELS) as OutreachMessage["kind"][]).map((kind) => {
-                  const isGenerating = generating?.contactId === contact.id && generating.kind === kind;
-                  return (
-                    <button
-                      key={kind}
-                      type="button"
-                      disabled={generating !== null}
-                      onClick={() => handleGenerate(contact.id, kind)}
-                      className="rounded border border-black/10 px-1.5 py-0.5 text-zinc-700 disabled:opacity-50 dark:border-white/10 dark:text-zinc-300"
-                    >
-                      {isGenerating ? "Generating..." : `Generate: ${KIND_LABELS[kind]}`}
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col gap-1.5">
+                <span className="label">Draft a message</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {(Object.keys(KIND_LABELS) as OutreachMessage["kind"][]).map((kind) => {
+                    const isGenerating = generating?.contactId === contact.id && generating.kind === kind;
+                    return (
+                      <button
+                        key={kind}
+                        type="button"
+                        disabled={generating !== null}
+                        onClick={() => handleGenerate(contact.id, kind)}
+                        className="btn btn-secondary btn-sm !h-7 !px-2.5 !text-xs"
+                      >
+                        {isGenerating ? "Generating…" : KIND_LABELS[kind]}
+                      </button>
+                    );
+                  })}
+                </div>
                 {contact.outreach_messages.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setExpandedMessagesId(isMessagesExpanded ? null : contact.id)}
-                    className="text-blue-700 hover:underline dark:text-blue-400"
+                    className="self-start text-xs font-medium text-accent-fg hover:underline"
                   >
-                    {isMessagesExpanded
-                      ? "Hide messages"
-                      : `Messages (${contact.outreach_messages.length})`}
+                    {isMessagesExpanded ? "Hide messages" : `Messages (${contact.outreach_messages.length})`}
                   </button>
                 )}
               </div>
 
               {isMessagesExpanded && (
-                <ul className="mt-1 flex flex-col gap-1 border-l border-black/10 pl-2 dark:border-white/10">
+                <ul className="flex flex-col gap-2">
                   {contact.outreach_messages.map((message) => (
-                    <li key={message.id} className="rounded bg-zinc-50 p-2 dark:bg-zinc-900">
-                      <p className="text-[11px] font-medium text-zinc-500">
-                        {KIND_LABELS[message.kind]} — {formatDateTime(message.created_at)}
-                        {message.sent_at && " · sent"}
-                      </p>
-                      <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{message.content}</p>
-                      <div className="mt-1 flex gap-2">
+                    <li
+                      key={message.id}
+                      className="flex flex-col gap-2 rounded-[10px] border border-line bg-bg p-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="caption">
+                          {KIND_LABELS[message.kind]} · {formatDateTime(message.created_at)}
+                        </span>
+                        <span className="chip !h-5 !text-[11px]">{message.sent_at ? "Sent" : "Not sent"}</span>
+                      </div>
+                      <p className="m-0 whitespace-pre-wrap text-[13px] leading-5 text-text">{message.content}</p>
+                      <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleCopy(message.id, message.content)}
-                          className="rounded border border-black/10 px-1.5 py-0.5 dark:border-white/10"
+                          className="btn btn-primary btn-sm"
                         >
+                          <Icon name="copy" size={14} />
                           {copiedId === message.id ? "Copied!" : "Copy"}
                         </button>
                         {!message.sent_at && (
                           <button
                             type="button"
                             onClick={() => handleMarkSent(contact.id, message.id)}
-                            className="rounded border border-black/10 px-1.5 py-0.5 dark:border-white/10"
+                            className="btn btn-secondary btn-sm"
                           >
-                            Mark sent
+                            Mark as sent
                           </button>
                         )}
                       </div>
                     </li>
                   ))}
+                  <li className="caption list-none">
+                    You paste it into LinkedIn yourself. Nothing is ever sent automatically.
+                  </li>
                 </ul>
               )}
             </li>
@@ -240,35 +249,38 @@ export function ContactsPanel({
       </ul>
 
       {showForm ? (
-        <div className="mt-1 flex flex-col gap-1">
+        <div className="flex flex-col gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name"
-            className="rounded border border-black/10 px-1 py-0.5 dark:border-white/10 dark:bg-zinc-900"
+            aria-label="Contact name"
+            className="field !h-[34px] !text-[13px]"
           />
           <input
             value={role}
             onChange={(e) => setRole(e.target.value)}
             placeholder="Role (e.g. HR recruiter)"
-            className="rounded border border-black/10 px-1 py-0.5 dark:border-white/10 dark:bg-zinc-900"
+            aria-label="Contact role"
+            className="field !h-[34px] !text-[13px]"
           />
           <input
             value={linkedinUrl}
             onChange={(e) => setLinkedinUrl(e.target.value)}
             placeholder="https://linkedin.com/in/..."
-            className="rounded border border-black/10 px-1 py-0.5 dark:border-white/10 dark:bg-zinc-900"
+            aria-label="LinkedIn profile URL"
+            className="field !h-[34px] !text-[13px]"
           />
           <div className="flex gap-2">
             <button
               type="button"
               disabled={saving || !name.trim()}
               onClick={handleAdd}
-              className="rounded bg-black px-2 py-1 text-white disabled:opacity-50 dark:bg-white dark:text-black"
+              className="btn btn-primary btn-sm"
             >
-              {saving ? "Adding..." : "Add"}
+              {saving ? "Adding…" : "Add"}
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="text-zinc-500 hover:underline">
+            <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost btn-sm">
               Cancel
             </button>
           </div>
@@ -277,9 +289,10 @@ export function ContactsPanel({
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="mt-1 text-left text-blue-700 hover:underline dark:text-blue-400"
+          className="btn btn-ghost btn-sm self-start !px-1.5"
         >
-          + Add a contact
+          <Icon name="plus" size={14} />
+          Add contact
         </button>
       )}
     </div>

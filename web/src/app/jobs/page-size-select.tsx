@@ -1,27 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/icons";
 import { PAGE_SIZES, buildJobsHref, type JobsQuery } from "@/lib/jobs/search-params";
 
 export function PageSizeSelect({ query }: { query: JobsQuery }) {
   const router = useRouter();
 
   return (
-    <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-      Per page
+    <span className="select">
       <select
+        aria-label="Jobs per page"
         value={query.pageSize}
         onChange={(e) =>
           router.push(
             buildJobsHref(query, { pageSize: Number(e.target.value) as JobsQuery["pageSize"] })
           )
         }
-        className="rounded border border-black/10 bg-transparent px-2 py-1 dark:border-white/10"
+        className="field !h-8 !text-[13px]"
       >
         {PAGE_SIZES.map((s) => (
-          <option key={s} value={s}>{s}</option>
+          <option key={s} value={s}>{s} per page</option>
         ))}
       </select>
-    </label>
+      <Icon name="chevronDown" />
+    </span>
   );
 }

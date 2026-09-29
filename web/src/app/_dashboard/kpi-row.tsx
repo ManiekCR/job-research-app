@@ -58,7 +58,7 @@ export async function KpiRow() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
       <StatTile
         label="New jobs"
         hint="last 7 days"
@@ -68,6 +68,7 @@ export async function KpiRow() {
       <StatTile
         label="Strong matches"
         hint="score ≥ 70, no application yet"
+        emphasis
         value={strong.count ?? 0}
         href={buildJobsHref(strongQuery, {})}
       />
@@ -79,6 +80,7 @@ export async function KpiRow() {
       <StatTile
         label="Reminders due"
         hint="today or overdue"
+        hintTone={(due.count ?? 0) > 0 ? "bad" : "muted"}
         value={due.count ?? 0}
         href="/applications"
       />
@@ -90,12 +92,9 @@ export async function KpiRow() {
 // page doesn't jump when the real tiles arrive.
 export function KpiRowSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
       {[0, 1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="h-[104px] animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800"
-        />
+        <div key={i} className="card h-[112px] animate-pulse" />
       ))}
     </div>
   );

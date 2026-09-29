@@ -58,7 +58,7 @@ export function ColumnChart({
   return (
     <div>
       {series.length >= 2 && (
-        <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+        <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-text-2">
           {series.map((s) => {
             const entry = (
               <>
@@ -194,10 +194,10 @@ export function ColumnChart({
 
         {active !== null && (
           <div
-            className="pointer-events-none absolute top-2 z-10 min-w-36 -translate-x-1/2 rounded-md border border-zinc-200 bg-white p-2 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="pointer-events-none absolute top-2 z-10 min-w-36 -translate-x-1/2 rounded-lg border border-line-strong bg-surface p-2.5 text-xs shadow-pop"
             style={{ left: `${tooltipLeft}%` }}
           >
-            <p className="mb-1 text-zinc-500">Week of {formatDay(weeks[active])}</p>
+            <p className="mb-1 text-text-3">Week of {formatDay(weeks[active])}</p>
             {[...series].reverse().map((s) => (
               <p key={s.key} className="flex items-center gap-2">
                 <span
@@ -206,13 +206,13 @@ export function ColumnChart({
                   style={{ backgroundColor: s.color }}
                 />
                 <span className="font-semibold">{s.values[active]}</span>
-                <span className="text-zinc-500">{series.length > 1 ? s.label : unit}</span>
+                <span className="text-text-3">{series.length > 1 ? s.label : unit}</span>
               </p>
             ))}
             {series.length > 1 && (
-              <p className="mt-1 border-t border-zinc-100 pt-1 dark:border-zinc-800">
+              <p className="mt-1 border-t border-line pt-1">
                 <span className="font-semibold">{totals[active]}</span>{" "}
-                <span className="text-zinc-500">total</span>
+                <span className="text-text-3">total</span>
               </p>
             )}
           </div>
@@ -221,11 +221,11 @@ export function ColumnChart({
 
       {/* Table view: every number in the chart, no hovering required */}
       <details className="mt-3 text-xs">
-        <summary className="cursor-pointer text-zinc-500">Show as table</summary>
+        <summary className="cursor-pointer text-text-3">Show as table</summary>
         <table className="mt-2 w-full text-left">
           <caption className="sr-only">{title}</caption>
           <thead>
-            <tr className="text-zinc-500">
+            <tr className="text-text-3">
               <th className="py-1 font-medium">Week of</th>
               {series.map((s) => (
                 <th key={s.key} className="py-1 font-medium">
@@ -237,7 +237,7 @@ export function ColumnChart({
           </thead>
           <tbody>
             {weeks.map((week, i) => (
-              <tr key={week} className="border-t border-zinc-100 dark:border-zinc-800">
+              <tr key={week} className="border-t border-line">
                 <td className="py-1">{formatDay(week)}</td>
                 {series.map((s) => (
                   <td key={s.key} className="py-1 tabular-nums">

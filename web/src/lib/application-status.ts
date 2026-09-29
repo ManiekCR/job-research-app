@@ -20,3 +20,14 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   rejected: "Rejected",
   no_response: "No Response",
 };
+// Dot / bar colour per status: one purple ramp for the open funnel (lighter = earlier),
+// green for an offer, grey for the closed outcomes. Values are CSS custom properties.
+export const STATUS_COLORS: Record<ApplicationStatus, string> = {
+  to_apply: "var(--ramp-1)",
+  applied: "var(--ramp-2)",
+  hr_interview: "var(--ramp-3)",
+  technical_interview: "var(--ramp-4)",
+  offer: "var(--good)",
+  rejected: "var(--closed)",
+  no_response: "var(--closed)",
+};

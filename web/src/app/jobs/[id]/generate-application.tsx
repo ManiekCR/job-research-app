@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { pdf, type DocumentProps } from "@react-pdf/renderer";
+import { Icon } from "@/components/icons";
 import { generateApplication, saveApplicationDocument, type GeneratedApplication } from "./actions";
 import { CvDocument } from "@/lib/pdf/cv-document";
 import { CoverLetterDocument } from "@/lib/pdf/cover-letter-document";
@@ -54,141 +55,135 @@ export function GenerateApplication({ jobId }: { jobId: string }) {
     setData({ ...data, experience });
   }
 
+  const fieldLabel = "label";
+
   if (!data) {
     return (
-      <section className="mt-8">
-        <h2 className="text-sm font-semibold text-black dark:text-zinc-50">
-          Tailored CV + cover letter
-        </h2>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={handleGenerate}
-          className="mt-2 rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-        >
-          {loading ? "Generating..." : "Generate CV + letter"}
+      <section className="card flex flex-col items-start gap-3 p-5 md:p-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="section-title !text-lg">Tailored CV + cover letter</h2>
+          <span className="caption">
+            Written from your master CV. Identity and dates are copied by code, never generated.
+          </span>
+        </div>
+        <button type="button" disabled={loading} onClick={handleGenerate} className="btn btn-primary">
+          <Icon name="applications" />
+          {loading ? "Generating…" : "Generate CV + letter"}
         </button>
-        {error && <p className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</p>}
+        {error && <p className="alert alert-bad">{error}</p>}
       </section>
     );
   }
 
+  async function handleDownload(kind: "cv" | "letter") {
+    if (!data) return;
+    setPdfLoading(kind);
+    setSaveError(null);
+    const blob =
+      kind === "cv"
+        ? await pdf(<CvDocument data={data} />).toBlob()
+        : await pdf(<CoverLetterDocument data={data} />).toBlob();
+    downloadBlob(
+      blob,
+      kind === "cv" ? `cv-${slugify(data.companyName)}.pdf` : `cover-letter-${slugify(data.companyName)}.pdf`,
+    );
+    const base64 = await blobToBase64(blob);
+    const result = await saveApplicationDocument(jobId, kind === "cv" ? "cv" : "cover_letter", base64);
+    if (result.ok) {
+      setSavedKinds((prev) => new Set(prev).add(kind));
+    } else {
+      setSaveError(result.error);
+    }
+    setPdfLoading(null);
+  }
+
   return (
-    <section className="mt-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-black dark:text-zinc-50">
-          Tailored CV + cover letter
-        </h2>
-        <span className="text-xs text-zinc-500">Language: {data.detectedLanguage}</span>
-      </div>
-      <p className="mt-1 text-xs text-zinc-500">
-        Review and edit before exporting — nothing is saved yet.
-      </p>
-
-      <label className="mt-4 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Headline
-      </label>
-      <input
-        value={data.headline}
-        onChange={(e) => setData({ ...data, headline: e.target.value })}
-        className="mt-1 w-full rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
-      />
-
-      <label className="mt-3 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Summary
-      </label>
-      <textarea
-        value={data.summary}
-        onChange={(e) => setData({ ...data, summary: e.target.value })}
-        rows={4}
-        className="mt-1 w-full rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
-      />
-
-      <p className="mt-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">Experience</p>
-      {data.experience.map((exp, index) => (
-        <div key={index} className="mt-2 rounded border border-black/10 p-2 dark:border-white/10">
-          <p className="text-sm font-medium text-black dark:text-zinc-50">
-            {exp.title} — {exp.company}
-          </p>
-          <textarea
-            value={exp.highlights.join("\n")}
-            onChange={(e) => updateExperienceHighlights(index, e.target.value)}
-            rows={Math.max(3, exp.highlights.length)}
-            className="mt-1 w-full rounded border border-black/10 px-2 py-1 text-xs dark:border-white/10 dark:bg-zinc-900"
-          />
+    <section className="card flex flex-col gap-4 p-5 md:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="section-title !text-lg">Tailored CV + cover letter</h2>
+          <span className="caption">Review and edit before exporting. Nothing is saved yet.</span>
         </div>
-      ))}
+        <span className="chip shrink-0">Language: {data.detectedLanguage}</span>
+      </div>
 
-      <label className="mt-4 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Cover letter
+      <label className="flex flex-col gap-1.5">
+        <span className={fieldLabel}>Headline</span>
+        <input
+          value={data.headline}
+          onChange={(e) => setData({ ...data, headline: e.target.value })}
+          className="field"
+        />
       </label>
-      <textarea
-        value={data.coverLetter}
-        onChange={(e) => setData({ ...data, coverLetter: e.target.value })}
-        rows={10}
-        className="mt-1 w-full rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
-      />
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={loading}
-          className="rounded border border-black/10 px-3 py-1 text-sm dark:border-white/10"
-        >
-          {loading ? "Regenerating..." : "Regenerate"}
+      <label className="flex flex-col gap-1.5">
+        <span className={fieldLabel}>Summary</span>
+        <textarea
+          value={data.summary}
+          onChange={(e) => setData({ ...data, summary: e.target.value })}
+          rows={4}
+          className="field"
+        />
+      </label>
+
+      <div className="flex flex-col gap-2">
+        <span className={fieldLabel}>Experience</span>
+        {data.experience.map((exp, index) => (
+          <div key={index} className="flex flex-col gap-1.5 rounded-[10px] border border-line p-3">
+            <span className="text-sm font-semibold">
+              {exp.title} <span className="font-normal text-text-3">· {exp.company}</span>
+            </span>
+            <textarea
+              value={exp.highlights.join("\n")}
+              onChange={(e) => updateExperienceHighlights(index, e.target.value)}
+              rows={Math.max(3, exp.highlights.length)}
+              aria-label={`Highlights for ${exp.title} at ${exp.company}`}
+              className="field !text-[13px]"
+            />
+          </div>
+        ))}
+      </div>
+
+      <label className="flex flex-col gap-1.5">
+        <span className={fieldLabel}>Cover letter</span>
+        <textarea
+          value={data.coverLetter}
+          onChange={(e) => setData({ ...data, coverLetter: e.target.value })}
+          rows={10}
+          className="field"
+        />
+      </label>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={handleGenerate} disabled={loading} className="btn btn-secondary">
+          <Icon name="refresh" className={loading ? "animate-spin" : ""} />
+          {loading ? "Regenerating…" : "Regenerate"}
         </button>
         <button
           type="button"
           disabled={pdfLoading !== null}
-          onClick={async () => {
-            setPdfLoading("cv");
-            setSaveError(null);
-            const blob = await pdf(<CvDocument data={data} />).toBlob();
-            downloadBlob(blob, `cv-${slugify(data.companyName)}.pdf`);
-            const base64 = await blobToBase64(blob);
-            const result = await saveApplicationDocument(jobId, "cv", base64);
-            if (result.ok) {
-              setSavedKinds((prev) => new Set(prev).add("cv"));
-            } else {
-              setSaveError(result.error);
-            }
-            setPdfLoading(null);
-          }}
-          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          onClick={() => handleDownload("cv")}
+          className="btn btn-primary"
         >
-          {pdfLoading === "cv" ? "Generating PDF..." : "Download CV (PDF)"}
+          {pdfLoading === "cv" ? "Generating PDF…" : "Download CV (PDF)"}
         </button>
         <button
           type="button"
           disabled={pdfLoading !== null}
-          onClick={async () => {
-            setPdfLoading("letter");
-            setSaveError(null);
-            const blob = await pdf(<CoverLetterDocument data={data} />).toBlob();
-            downloadBlob(blob, `cover-letter-${slugify(data.companyName)}.pdf`);
-            const base64 = await blobToBase64(blob);
-            const result = await saveApplicationDocument(jobId, "cover_letter", base64);
-            if (result.ok) {
-              setSavedKinds((prev) => new Set(prev).add("letter"));
-            } else {
-              setSaveError(result.error);
-            }
-            setPdfLoading(null);
-          }}
-          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          onClick={() => handleDownload("letter")}
+          className="btn btn-primary"
         >
-          {pdfLoading === "letter" ? "Generating PDF..." : "Download letter (PDF)"}
+          {pdfLoading === "letter" ? "Generating PDF…" : "Download letter (PDF)"}
         </button>
       </div>
 
       {saveError && (
-        <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+        <p className="alert alert-bad">
           Downloaded, but not saved to the application tracker: {saveError}
         </p>
       )}
       {savedKinds.size > 0 && (
-        <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+        <p className="alert alert-good">
           Saved to the application tracker ({[...savedKinds].join(", ")}).
         </p>
       )}

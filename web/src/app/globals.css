@@ -1,54 +1,574 @@
 @import "tailwindcss";
 
 /* Dark mode follows the data-theme attribute on <html> (set before first paint
-   by a small script in layout.tsx, and flipped by the nav toggle), so the toggle
+   by a small script in layout.tsx, and flipped by the theme toggle), so the toggle
    can override the OS setting. Tailwind's dark: variants use the same attribute. */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* Design tokens, from the "Job Search HQ — Web Design Board".
+   Light is the default; [data-theme="dark"] overrides every token, so components
+   only ever reference the tokens and never need dark: variants. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --background: #0a0a0a;
-  --foreground: #ededed;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Chart palette: validated with the dataviz validate_palette.js script
-   (light surface #ffffff, dark surface #0a0a0a). Slots are used in this fixed order. */
-:root {
+  color-scheme: light;
+  --bg: #f7f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f1f5;
+  --surface-3: #e7e7ee;
+  --border: #e3e3ea;
+  --border-strong: #cfcfd9;
+  --text: #15151c;
+  --text-2: #4e4e5c;
+  --text-3: #6b6b79;
+  --accent: #4a42d6;
+  --accent-hover: #3b34b8;
+  --accent-soft: #eeedfd;
+  --accent-text: #3a33b0;
+  --on-accent: #ffffff;
+  --good: #0b7a53;
+  --good-soft: #e2f4eb;
+  --warn: #8a5300;
+  --warn-soft: #fcefd6;
+  --bad: #b3261e;
+  --bad-soft: #fce7e5;
+  /* Pipeline ramp: one hue, lighter = earlier in the funnel. */
+  --ramp-1: #c9c6f6;
+  --ramp-2: #a19bef;
+  --ramp-3: #7a73e6;
+  --ramp-4: #4a42d6;
+  --closed: #b9b9c4;
+  /* Chart palette: validated with the dataviz validate_palette.js script.
+     Slots are used in this fixed order. */
   --series-1: #2a78d6; /* blue */
   --series-2: #eb6834; /* orange */
   --series-3: #1baf7a; /* aqua */
   --series-4: #eda100; /* yellow */
   --series-other: #898781; /* grey, for "Other" */
-  --chart-grid: #e1e0d9;
-  --chart-axis: #c3c2b7;
-  --chart-muted: #898781;
+  --chart-grid: #e9e9ef;
+  --chart-axis: #cfcfd9;
+  --chart-muted: #6b6b79;
+  --code-bg: #fafafc;
+  --shadow: 0 1px 2px rgba(21, 21, 28, 0.05);
+  --shadow-lg: 0 24px 48px -12px rgba(21, 21, 28, 0.18), 0 2px 6px rgba(21, 21, 28, 0.06);
+  --ctl-h: 36px; /* height of buttons and inputs; 44px on phones (touch targets) */
+  --ctl-h-sm: 30px;
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d12;
+  --surface: #15151c;
+  --surface-2: #1c1c25;
+  --surface-3: #262631;
+  --border: #262632;
+  --border-strong: #363644;
+  --text: #ececf2;
+  --text-2: #b0b0be;
+  --text-3: #8c8c9c;
+  --accent: #5f57e8;
+  --accent-hover: #6f68f0;
+  --accent-soft: #22204a;
+  --accent-text: #b9b4ff;
+  --on-accent: #ffffff;
+  --good: #4cc99a;
+  --good-soft: #11291f;
+  --warn: #f0b454;
+  --warn-soft: #2d2211;
+  --bad: #f2877e;
+  --bad-soft: #331817;
+  --ramp-1: #34306e;
+  --ramp-2: #4c46a8;
+  --ramp-3: #6e67e6;
+  --ramp-4: #9d97fa;
+  --closed: #4a4a57;
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
   --series-4: #c98500;
   --series-other: #6b6a65;
-  --chart-grid: #2c2c2a;
-  --chart-axis: #383835;
-  --chart-muted: #898781;
+  --chart-grid: #23232d;
+  --chart-axis: #363644;
+  --chart-muted: #8c8c9c;
+  --code-bg: #111117;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --ctl-h: 44px;
+    --ctl-h-sm: 44px;
+  }
+}
+
+/* Tokens as Tailwind colours: bg-surface, text-text-2, border-line, text-accent-fg ... */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --font-sans: var(--font-instrument-sans);
+  --font-display: var(--font-schibsted-grotesk);
+  --font-mono: var(--font-geist-mono);
+  --shadow-card: var(--shadow);
+  --shadow-pop: var(--shadow-lg);
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-instrument-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+@media (max-width: 767px) {
+  body {
+    font-size: 15px;
+    line-height: 22px;
+  }
+}
+
+a {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Shared component classes ---- */
+@layer components {
+  .font-num {
+    font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  .font-heading {
+    font-family: var(--font-schibsted-grotesk), "Helvetica Neue", Helvetica, sans-serif;
+    letter-spacing: -0.015em;
+  }
+
+  .icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .card-link {
+    color: var(--text);
+    text-decoration: none;
+  }
+  .card-link:hover {
+    border-color: var(--border-strong);
+    text-decoration: none;
+  }
+  .row-link {
+    color: var(--text);
+    text-decoration: none;
+    border-radius: 8px;
+  }
+  .row-link:hover {
+    background: var(--surface-2);
+    text-decoration: none;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: var(--ctl-h);
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    box-sizing: border-box;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  .btn:hover {
+    text-decoration: none;
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-2);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .btn-danger {
+    background: transparent;
+    color: var(--bad);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--bad-soft);
+  }
+  .btn-sm {
+    height: var(--ctl-h-sm);
+    padding: 0 10px;
+    font-size: 13px;
+    border-radius: 7px;
+  }
+  .btn-icon {
+    width: var(--ctl-h);
+    padding: 0;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    background: var(--surface-2);
+    color: var(--text-2);
+  }
+  .chip-accent {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+  .chip-good {
+    background: var(--good-soft);
+    color: var(--good);
+  }
+  .chip-warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  .chip-bad {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+  .chip-outline {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .caption {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--text-3);
+  }
+  .label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+  @media (max-width: 767px) {
+    .caption,
+    .label {
+      font-size: 13px;
+      line-height: 18px;
+    }
+  }
+
+  .field {
+    height: var(--ctl-h);
+    box-sizing: border-box;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    width: 100%;
+  }
+  .field::placeholder {
+    color: var(--text-3);
+  }
+  .field:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  textarea.field {
+    height: auto;
+    padding: 10px 12px;
+    line-height: 20px;
+  }
+  @media (max-width: 767px) {
+    .field {
+      font-size: 16px; /* 16px stops iOS zooming into the field */
+    }
+  }
+
+  /* <select> with a chevron: wrap as <span class="select"><select class="field">…</select><svg class="icon">…</svg></span> */
+  .select {
+    position: relative;
+    display: inline-flex;
+  }
+  .select select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 30px;
+    cursor: pointer;
+    width: auto;
+  }
+  .select .icon {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-3);
+  }
+  .select-on select {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+
+  /* Toggle switch: <label class="switch"><input type="checkbox"><span class="track"/>Text</label> */
+  .switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    position: relative;
+  }
+  .switch input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+  .track {
+    width: 30px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--surface-3);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s;
+  }
+  .switch input:checked + .track {
+    background: var(--accent);
+  }
+  .switch input:checked + .track::after {
+    transform: translateX(12px);
+  }
+  .switch input:focus-visible + .track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Segmented control (sort, message type…) */
+  .segmented {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 9px;
+    background: var(--surface-2);
+    gap: 2px;
+  }
+  .segmented > * {
+    border-color: transparent;
+    background: transparent;
+    color: var(--text-2);
+  }
+  .segmented > [aria-pressed="true"],
+  .segmented > [aria-current="true"] {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    border-color: var(--border);
+  }
+
+  .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .alert-bad {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+  .alert-good {
+    background: var(--good-soft);
+    color: var(--good);
+  }
+  .alert-warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .page-title {
+    margin: 0;
+    font-family: var(--font-schibsted-grotesk), "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 28px;
+    line-height: 34px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .section-title {
+    margin: 0;
+    font-family: var(--font-schibsted-grotesk), "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  @media (max-width: 767px) {
+    .page-title {
+      font-size: 22px;
+      line-height: 28px;
+    }
+    .section-title {
+      font-size: 16px;
+      line-height: 22px;
+    }
+  }
+}
+
+/* Sidebar / tab-bar navigation items */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--text-2);
+  font-weight: 500;
+  text-decoration: none;
+}
+.nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  text-decoration: none;
+}
+.nav-item[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 52px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.tab-item:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+.tab-item[aria-current="page"] {
+  color: var(--accent-text);
+}
+
+/* Show the icon that matches the mode you would switch TO */
+.theme-icon-dark {
+  display: none;
+}
+:root[data-theme="dark"] .theme-icon-light {
+  display: none;
+}
+:root[data-theme="dark"] .theme-icon-dark {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

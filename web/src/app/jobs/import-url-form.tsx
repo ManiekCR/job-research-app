@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/icons";
 import { fetchJobPreview, importJob } from "./actions";
 
 export function ImportUrlForm() {
@@ -61,85 +62,88 @@ export function ImportUrlForm() {
 
   if (step === "url") {
     return (
-      <div className="mt-4 rounded border border-black/10 p-4 dark:border-white/10">
-        <p className="text-sm font-medium text-black dark:text-zinc-50">
+      <div className="card flex flex-col gap-2.5 p-4">
+        <label htmlFor="import-url" className="section-title">
           Import a job from a URL
-        </p>
-        <div className="mt-2 flex gap-2">
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
+            id="import-url"
             type="url"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             placeholder="https://www.linkedin.com/jobs/view/..."
-            className="flex-1 rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="field"
           />
           <button
             type="button"
             disabled={!url || loading}
             onClick={handleFetchPreview}
-            className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+            className="btn btn-secondary"
           >
-            {loading ? "Fetching..." : "Fetch"}
+            <Icon name="link" />
+            {loading ? "Fetching…" : "Fetch"}
           </button>
         </div>
-        {error && <p className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</p>}
+        {error && <p className="alert alert-bad">{error}</p>}
       </div>
     );
   }
 
   return (
-    <div className="mt-4 flex flex-col gap-2 rounded border border-black/10 p-4 dark:border-white/10">
-      <p className="text-sm font-medium text-black dark:text-zinc-50">
-        Check and complete before importing
-      </p>
-      {error && <p className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-      <input
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        placeholder="Job title"
-        className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
-      />
-      <input
-        value={company}
-        onChange={(event) => setCompany(event.target.value)}
-        placeholder="Company"
-        className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
-      />
-      <input
-        value={location}
-        onChange={(event) => setLocation(event.target.value)}
-        placeholder="Location"
-        className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
-      />
-      <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+    <div className="card flex flex-col gap-3 p-4">
+      <p className="section-title">Check and complete before importing</p>
+      {error && <p className="alert alert-bad">{error}</p>}
+      <div className="grid gap-3 md:grid-cols-3">
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Job title"
+          aria-label="Job title"
+          className="field"
+        />
+        <input
+          value={company}
+          onChange={(event) => setCompany(event.target.value)}
+          placeholder="Company"
+          aria-label="Company"
+          className="field"
+        />
+        <input
+          value={location}
+          onChange={(event) => setLocation(event.target.value)}
+          placeholder="Location"
+          aria-label="Location"
+          className="field"
+        />
+      </div>
+      <label className="switch">
         <input
           type="checkbox"
           checked={isRemote}
           onChange={(event) => setIsRemote(event.target.checked)}
         />
+        <span className="track" />
         Remote
       </label>
       <textarea
         value={description}
         onChange={(event) => setDescription(event.target.value)}
         placeholder="Description (auto-filled if found)"
+        aria-label="Description"
         rows={4}
-        className="rounded border border-black/10 px-2 py-1 text-sm dark:border-white/10 dark:bg-zinc-900"
+        className="field"
       />
       <div className="flex gap-2">
         <button
           type="button"
           disabled={!title || !company || loading}
           onClick={handleImport}
-          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className="btn btn-primary"
         >
-          {loading ? "Importing..." : "Import"}
+          {loading ? "Importing…" : "Import"}
         </button>
-        <button
-          type="button"
-          onClick={reset}
-          className="rounded border border-black/10 px-3 py-1 text-sm dark:border-white/10"
-        >
+        <button type="button" onClick={reset} className="btn btn-secondary">
           Cancel
         </button>
       </div>
